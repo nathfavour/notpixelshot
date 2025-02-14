@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart'; // for ValueNotifier
+import 'package:flutter/material.dart'; // for debugPrint
 import 'package:permission_handler/permission_handler.dart'; // for requesting file permissions on mobile
 
 class ConfigService {
@@ -9,11 +10,17 @@ class ConfigService {
       ValueNotifier({}); // live sync notifier
 
   static Future<void> initialize() async {
-    // Request storage permission only on mobile (non-desktop)
-    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
-      final status = await Permission.storage.request();
-      if (!status.isGranted) {
-        print('Storage permission not granted on mobile.');
+    // Request storage permission only on Android and iOS
+    if (Platform.isAndroid || Platform.isIOS) {
+      try {
+        final status = await Permission.storage.request();
+        if (!status.isGranted) {
+          print('Storage permission not granted on mobile.');
+          // Optionally show a dialog to the user explaining why the permission is needed
+        }
+      } catch (e) {
+        // Handle the exception, e.g., log it or show an error message
+        debugPrint('Error requesting storage permission: $e');
       }
     }
 
