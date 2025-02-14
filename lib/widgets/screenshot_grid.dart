@@ -24,6 +24,12 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
     _startMonitoring();
   }
 
+  @override
+  void dispose() {
+    IndexService.totalScreenshotsNotifier.removeListener(_loadFiles);
+    super.dispose();
+  }
+
   Future<void> _loadFiles() async {
     final directoryPath = IndexService.screenshotDirectory;
     final directory = Directory(directoryPath);
@@ -66,61 +72,66 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      itemCount: _files.length,
-      physics: const AlwaysScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        mainAxisSpacing: 4,
-        crossAxisSpacing: 4,
-      ),
-      itemBuilder: (context, index) {
-        final file = _files[index];
-        final isIndexed = _indexedFiles.contains(file.path);
+    return ValueListenableBuilder<int>(
+      valueListenable: IndexService.totalScreenshotsNotifier,
+      builder: (context, totalScreenshots, child) {
+        return GridView.builder(
+          itemCount: _files.length,
+          physics: const AlwaysScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            mainAxisSpacing: 4,
+            crossAxisSpacing: 4,
+          ),
+          itemBuilder: (context, index) {
+            final file = _files[index];
+            final isIndexed = _indexedFiles.contains(file.path);
 
-        return GestureDetector(
-          onTap: () {
-            // Show fullscreen preview
-          },
-          child: Card(
-            child: Stack(
-              children: [
-                Image.file(
-                  File(file.path),
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                ),
-                Positioned(
-                  right: 4,
-                  top: 4,
-                  child: IconButton(
-                    icon: const Icon(Icons.folder_open),
-                    onPressed: () {
-                      // Open file in system explorer
-                    },
-                  ),
-                ),
-                if (isIndexed)
-                  Positioned(
-                    bottom: 4,
-                    right: 4,
-                    child: Container(
-                      padding: const EdgeInsets.all(2),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.7),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        size: 16,
-                        color: Colors.white,
+            return GestureDetector(
+              onTap: () {
+                // Show fullscreen preview
+              },
+              child: Card(
+                child: Stack(
+                  children: [
+                    Image.file(
+                      File(file.path),
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: IconButton(
+                        icon: const Icon(Icons.folder_open),
+                        onPressed: () {
+                          // Open file in system explorer
+                        },
                       ),
                     ),
-                  ),
-              ],
-            ),
-          ),
+                    if (isIndexed)
+                      Positioned(
+                        bottom: 4,
+                        right: 4,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.7),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
         );
       },
     );

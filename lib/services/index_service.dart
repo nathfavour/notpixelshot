@@ -9,6 +9,7 @@ class IndexService {
   static final ValueNotifier<IndexProgress> progressNotifier = ValueNotifier(
     IndexProgress(total: 0, processed: 0, current: ''),
   );
+  static final ValueNotifier<int> totalScreenshotsNotifier = ValueNotifier(0);
 
   static String get screenshotDirectory =>
       ConfigService.configData['defaultScreenshotDirectory']
@@ -33,8 +34,25 @@ class IndexService {
       version: 1,
     );
 
+    // Initialize total screenshots count
+    _updateTotalScreenshotsCount();
+
     // Start processing screenshots immediately
     _startProcessing();
+  }
+
+  static Future<void> _updateTotalScreenshotsCount() async {
+    final directory = Directory(screenshotDirectory);
+    if (!await directory.exists()) return;
+
+    final files = await directory
+        .list()
+        .where((f) =>
+            f.path.toLowerCase().endsWith('.png') ||
+            f.path.toLowerCase().endsWith('.jpg'))
+        .toList();
+
+    totalScreenshotsNotifier.value = files.length;
   }
 
   static Future<void> _startProcessing() async {
@@ -112,7 +130,10 @@ class IndexService {
 
   static void monitorDirectory(
       Directory directory, void Function(FileSystemEvent) onEvent) {
-    directory.watch().listen(onEvent);
+    directory.watch().listen((event) async {
+      onEvent(event);
+      await _updateTotalScreenshotsCount(); // Update total count on file changes
+    });
   }
 
   static Future<void> scanAndIndexScreenshots() async {
