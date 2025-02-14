@@ -10,6 +10,10 @@ class IndexService {
     IndexProgress(total: 0, processed: 0, current: ''),
   );
 
+  static String get screenshotDirectory =>
+      ConfigService.configData['defaultScreenshotDirectory']
+          [Platform.operatingSystem];
+
   static Future<void> initialize() async {
     // Initialize SQLite database
     database = await openDatabase(
@@ -34,8 +38,7 @@ class IndexService {
   }
 
   static Future<void> _startProcessing() async {
-    final directory = Directory(ConfigService
-        .configData['defaultScreenshotDirectory'][Platform.operatingSystem]);
+    final directory = Directory(screenshotDirectory);
 
     if (!await directory.exists()) return;
 
@@ -53,6 +56,14 @@ class IndexService {
     );
 
     for (var file in files) {
+      if (await _isAlreadyIndexed(file.path)) {
+        progressNotifier.value = progressNotifier.value.copyWith(
+          processed: progressNotifier.value.processed + 1,
+          current: file.path,
+        );
+        continue;
+      }
+
       progressNotifier.value = progressNotifier.value.copyWith(
         current: file.path,
       );
@@ -84,6 +95,24 @@ class IndexService {
         processed: progressNotifier.value.processed + 1,
       );
     }
+  }
+
+  static Future<bool> _isAlreadyIndexed(String filePath) async {
+    final result = await database.query(
+      'screenshots',
+      where: 'path = ?',
+      whereArgs: [filePath],
+    );
+    return result.isNotEmpty;
+  }
+
+  static Future<List<Map<String, dynamic>>> getIndexedFiles() async {
+    return await database.query('screenshots');
+  }
+
+  static void monitorDirectory(
+      Directory directory, void Function(FileSystemEvent) onEvent) {
+    directory.watch().listen(onEvent);
   }
 
   static Future<void> scanAndIndexScreenshots() async {
