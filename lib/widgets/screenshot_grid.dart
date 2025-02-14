@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../services/index_service.dart';
 
 class ScreenshotGrid extends StatelessWidget {
@@ -22,7 +23,8 @@ class ScreenshotGrid extends StatelessWidget {
           child: Card(
             child: Stack(
               children: [
-                Image.file(/* Screenshot file */),
+                // Replace with actual screenshot file path when available.
+                Image.file(File('path/to/placeholder.png')),
                 Positioned(
                   right: 4,
                   top: 4,
