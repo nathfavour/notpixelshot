@@ -1,0 +1,25 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+}  }    }      }        if (port > 9900) break;        // If port scanning times out, just break or handle accordingly        port++;      } catch (_) {        });            ..close();            ..write('Hello, world!')          request.response        server.listen((HttpRequest request) {        // Set up request handling        serverRunning = true;        final server = await HttpServer.bind(InternetAddress.anyIPv4, port);      try {    while (!serverRunning) {    bool serverRunning = false;    int port = 9876;  static Future<void> initialize() async {class NetworkService {import 'dart:io';
