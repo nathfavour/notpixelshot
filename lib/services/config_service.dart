@@ -1,10 +1,22 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart'; // for ValueNotifier
+import 'package:permission_handler/permission_handler.dart'; // for requesting file permissions on mobile
 
 class ConfigService {
   static late Map<String, dynamic> configData;
+  static final ValueNotifier<Map<String, dynamic>> configNotifier =
+      ValueNotifier({}); // live sync notifier
 
   static Future<void> initialize() async {
+    // Request storage permission only on mobile (non-desktop)
+    if (!Platform.isWindows && !Platform.isLinux && !Platform.isMacOS) {
+      final status = await Permission.storage.request();
+      if (!status.isGranted) {
+        print('Storage permission not granted on mobile.');
+      }
+    }
+
     final home = Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
         '';
@@ -26,10 +38,12 @@ class ConfigService {
       await _saveConfig(file, configData);
       print('Default config created at $filePath');
     }
+    configNotifier.value = configData; // update live notifier
   }
 
   static void updateConfig(Map<String, dynamic> newConfig) {
     configData.addAll(newConfig);
+    configNotifier.value = configData; // live update notifier on change
     _saveConfig(File(configData['configFilePath']), configData);
   }
 
