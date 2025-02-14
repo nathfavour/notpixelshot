@@ -10,6 +10,9 @@ class ScreenshotGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
+      // Added a fixed itemCount (use actual count when available)
+      itemCount: 20,
+      physics: const AlwaysScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         mainAxisSpacing: 4,

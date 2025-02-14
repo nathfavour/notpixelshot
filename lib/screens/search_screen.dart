@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/search_bar.dart';
 import '../widgets/screenshot_grid.dart';
 import '../widgets/fullscreen_image.dart';
+import '../widgets/processing_status.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -28,6 +29,7 @@ class _SearchScreenState extends State<SearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('NotPixelShot'),
+        elevation: 2,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -37,11 +39,21 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
       body: Column(
         children: [
-          CustomSearchBar(onSearch: _onSearch),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: CustomSearchBar(onSearch: _onSearch),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: const ProcessingStatus(),
+          ),
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ScreenshotGrid(searchQuery: _searchQuery),
+                : Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: ScreenshotGrid(searchQuery: _searchQuery),
+                  ),
           ),
         ],
       ),
