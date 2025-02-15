@@ -75,7 +75,8 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final filesToShow = widget.searchResults;
+    // Provide a default value (empty list) when widget.searchResults is null
+    final filesToShow = widget.searchResults ?? [];
 
     return ValueListenableBuilder<int>(
       valueListenable: IndexService.totalScreenshotsNotifier,
@@ -88,7 +89,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
           );
         }
         return GridView.builder(
-          itemCount: filesToShow?.length ?? 0,
+          itemCount: filesToShow.length, // Use .length directly
           physics: const AlwaysScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 4,
@@ -96,7 +97,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
             crossAxisSpacing: 4,
           ),
           itemBuilder: (context, index) {
-            final file = filesToShow![index];
+            final file = filesToShow[index];
             final filePath = file['path'] as String;
             final isIndexed = _indexedFiles.contains(filePath);
             final isHighlighted = widget.searchQuery.isNotEmpty &&
@@ -134,7 +135,6 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
                     right: 4,
                     top: 4,
                     child: IconButton(
-                      icon: const Icon(Icons.folder_open),
                       onPressed: () async {
                         // Open the file in the system's file explorer
                         final Uri fileExplorerUri =
@@ -148,6 +148,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
                           // Optionally show an error message to the user
                         }
                       },
+                      icon: const Icon(Icons.folder_open),
                     ),
                   ),
                   if (isIndexed)
