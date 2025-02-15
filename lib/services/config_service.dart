@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart'; // for ValueNotifier
 import 'package:flutter/material.dart'; // for debugPrint
+import 'package:notpixelshot/services/network_service.dart';
+import 'package:notpixelshot/widgets/permission_dialog.dart';
 import 'package:permission_handler/permission_handler.dart'; // for requesting file permissions on mobile
 import 'package:http/http.dart' as http;
 
