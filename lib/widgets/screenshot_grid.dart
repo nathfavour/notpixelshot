@@ -63,15 +63,8 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
   }
 
   String _getScreenshotDirectory() {
-    if (Platform.isWindows) {
-      return IndexService.screenshotDirectoryWindows;
-    } else if (Platform.isMacOS) {
-      return IndexService.screenshotDirectoryMacOS;
-    } else if (Platform.isLinux) {
-      return IndexService.screenshotDirectoryLinux;
-    } else {
-      return IndexService.screenshotDirectory;
-    }
+    // Replace platform-specific getters with single method call
+    return IndexService.screenshotDirectory;
   }
 
   Future<void> _openFileWithSystemViewer(String filePath) async {
