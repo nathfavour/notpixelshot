@@ -6,7 +6,7 @@ import '../services/index_service.dart';
 class ScreenshotGrid extends StatefulWidget {
   final String searchQuery;
 
-  const ScreenshotGrid({super.key, required this.searchQuery});
+  const ScreenshotGrid({Key? key, required this.searchQuery}) : super(key: key);
 
   @override
   State<ScreenshotGrid> createState() => _ScreenshotGridState();
@@ -31,28 +31,39 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
   }
 
   Future<void> _loadFiles() async {
-    final directoryPath = _getScreenshotDirectory();
-    final directory = Directory(directoryPath);
+    try {
+      final directoryPath = _getScreenshotDirectory();
+      final directory = Directory(directoryPath);
 
-    if (!await directory.exists()) return;
+      if (!await directory.exists()) {
+        print('Screenshot directory does not exist: $directoryPath');
+        return;
+      }
 
-    final files = await directory
-        .list()
-        .where((f) =>
-            f.path.toLowerCase().endsWith('.png') ||
-            f.path.toLowerCase().endsWith('.jpg'))
-        .toList();
+      final files = await directory
+          .list()
+          .where((f) =>
+              f.path.toLowerCase().endsWith('.png') ||
+              f.path.toLowerCase().endsWith('.jpg'))
+          .toList();
 
-    setState(() {
-      _files = files;
-    });
+      setState(() {
+        _files = files;
+      });
+    } catch (e) {
+      print('Error loading files: $e');
+    }
   }
 
   Future<void> _loadIndexedFiles() async {
-    final indexed = await IndexService.getIndexedFiles();
-    setState(() {
-      _indexedFiles = indexed.map((e) => e['path'] as String).toSet();
-    });
+    try {
+      final indexed = await IndexService.getIndexedFiles();
+      setState(() {
+        _indexedFiles = indexed.map((e) => e['path'] as String).toSet();
+      });
+    } catch (e) {
+      print('Error loading indexed files: $e');
+    }
   }
 
   void _startMonitoring() {
@@ -111,6 +122,8 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
                       fit: BoxFit.cover,
                       width: double.infinity,
                       height: double.infinity,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Center(child: Icon(Icons.error)),
                     ),
                     Positioned(
                       right: 4,

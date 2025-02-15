@@ -125,10 +125,14 @@ class IndexService {
 
   static Future<void> _startProcessing() async {
     try {
-      final directory = Directory(screenshotDirectory);
+      final directoryPath = screenshotDirectory;
+      final directory = Directory(directoryPath);
 
       if (!await directory.exists()) {
-        print('IndexService: Screenshot directory does not exist');
+        print(
+            'IndexService: Screenshot directory does not exist: $directoryPath');
+        progressNotifier.value =
+            IndexProgress(total: 0, processed: 0, current: '');
         return;
       }
 

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import '../widgets/search_bar.dart';
 import '../widgets/screenshot_grid.dart';
-import '../widgets/fullscreen_image.dart';
 import '../widgets/processing_status.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  const SearchScreen({Key? key}) : super(key: key);
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
