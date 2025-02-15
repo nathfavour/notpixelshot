@@ -84,28 +84,29 @@ class _SearchScreenState extends State<SearchScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
-                  print('SearchScreen: Error loading results: ${snapshot.error}');
+                  print(
+                      'SearchScreen: Error loading results: ${snapshot.error}');
                   return Center(child: Text('Error: ${snapshot.error}'));
                 } else if (snapshot.hasData) {
                   final searchResults = snapshot.data!;
-                  print('SearchScreen: Displaying ${searchResults.length} results');
-                  return Padding(ror}');
-                    padding: const EdgeInsets.all(16),rror: ${snapshot.error}'));
+                  print(
+                      'SearchScreen: Displaying ${searchResults.length} results');
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
                     child: ScreenshotGrid(
                       searchQuery: _searchQuery,
                       searchResults: searchResults,
-                    ),chResults.length} results');
+                    ),
                   );
-                } else {l(16),
+                } else {
                   print('SearchScreen: No results found');
-                  return const Center(child: Text('No results found.'));searchQuery: _searchQuery,
-                }  searchResults: searchResults,
+                  return const Center(child: Text('No results found.'));
+                }
               },
             ),
           ),
-        ], print('SearchScreen: No results found');
-      ),  return const Center(child: Text('No results found.'));
-    );  }
-  }  },
-}  ),
+        ],
+      ),
+    );
+  }
 }
