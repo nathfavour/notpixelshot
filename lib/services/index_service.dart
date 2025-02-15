@@ -15,7 +15,6 @@ class IndexService {
 
   static String get screenshotDirectory => ConfigService.getScreenshotPath();
   static String get _databasePath => ConfigService.getDatabasePath();
-  static String get _indexPath => ConfigService.getIndexPath();
 
   static Future<void> initialize() async {
     try {
@@ -325,31 +324,66 @@ class IndexService {
     }
   }
 
-  static double _calculateScore(
-      String text, String query, FuzzyOptions options) {
-    if (text.isEmpty) return 0.0;
-
-    final fuzzy = Fuzzy([text], options: options);
-    final results = fuzzy.search(query);
-
-    if (results.isEmpty) return 0.0;
-
-    // Calculate various scoring factors
-    final directMatchScore =
-        text.toLowerCase().contains(query.toLowerCase()) ? 0.3 : 0.0;
-    final fuzzyScore = results.first.score;
-    final positionScore =
-        text.toLowerCase().indexOf(query.toLowerCase()) == 0 ? 0.2 : 0.0;
-
-    return directMatchScore + fuzzyScore + positionScore;
-  }
-
   static void monitorDirectory(
       Directory directory, void Function(FileSystemEvent) onEvent) {
     directory.watch().listen((event) async {
+      if (event.type == FileSystemEvent.create &&
+          (event.path.toLowerCase().endsWith('.png') ||
+              event.path.toLowerCase().endsWith('.jpg'))) {
+        // Process new file immediately when detected
+        await _processNewScreenshot(event.path);
+      }
       onEvent(event);
-      await _updateTotalScreenshotsCount(); // Update total count on file changes
+      await _updateTotalScreenshotsCount();
     });
+  }
+
+  static Future<void> _processNewScreenshot(String filePath) async {
+    try {
+      // Add a small delay to ensure the file is fully written
+      await Future.delayed(const Duration(milliseconds: 100));
+
+      if (await _isAlreadyIndexed(filePath)) {
+        print('IndexService: File already indexed: $filePath');
+        return;
+      }
+
+      print('IndexService: Processing new screenshot: $filePath');
+
+      // Run tesseract
+      final result = await Process.run('tesseract', [filePath, 'stdout']);
+      final extractedText = result.stdout.toString();
+
+      // Call Ollama
+      final ollamaPrompt = ConfigService.configData['ollamaPrompt'];
+      final ollamaModel = ConfigService.configData['ollamaModelName'];
+      final ollamaResult = await Process.run('ollama', [
+        'run',
+        ollamaModel,
+        '$ollamaPrompt\nExtracted text: $extractedText'
+      ]);
+
+      // Store in database
+      await database.insert('screenshots', {
+        'id': filePath,
+        'path': filePath,
+        'extracted_text': extractedText,
+        'ollama_description': ollamaResult.stdout.toString(),
+        'platform': Platform.operatingSystem,
+        'created_at': DateTime.now().millisecondsSinceEpoch,
+      });
+
+      print('IndexService: Successfully processed new screenshot: $filePath');
+
+      // Update the progress notifier
+      progressNotifier.value = progressNotifier.value.copyWith(
+        processed: progressNotifier.value.processed + 1,
+        current: filePath,
+      );
+    } catch (e, stackTrace) {
+      print('IndexService: Error processing new screenshot: $e');
+      print('IndexService: Stack trace: $stackTrace');
+    }
   }
 
   static Future<void> scanAndIndexScreenshots() async {
