@@ -8,7 +8,10 @@ import 'config_service.dart';
 
 class NetworkService {
   static final _info = NetworkInfo();
-  static const int defaultPort = 9876;
+
+  // Use config for server settings
+  static int get defaultPort => ConfigService.configData['server']['port'];
+  static int get serverTimeout => ConfigService.configData['server']['timeout'];
   static List<String> _discoveredHosts = [];
 
   static Future<void> initialize() async {
@@ -93,7 +96,7 @@ class NetworkService {
   }
 
   static Future<String?> findServer() async {
-    final timeout = ConfigService.configData['serverTimeout'] ?? 5000;
+    final timeout = ConfigService.configData['server']['timeout'];
 
     try {
       // Try common local network addresses first

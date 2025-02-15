@@ -27,7 +27,7 @@ class ConfigService {
   static Future<void> initialize() async {
     try {
       print('ConfigService: Initializing...');
-      configData = _getDefaultConfig();
+      configData = await _getDefaultConfig();
       print('ConfigService: Default config loaded');
 
       if (Platform.isAndroid || Platform.isIOS) {
@@ -57,7 +57,7 @@ class ConfigService {
         print('ConfigService: Loaded config from file: $configData');
       } else {
         print('ConfigService: Config file not found, creating default...');
-        configData = _getDefaultConfig();
+        configData = await _getDefaultConfig();
         await _saveConfig(file, configData);
         print('ConfigService: Default config created');
       }
@@ -182,31 +182,48 @@ class ConfigService {
     }
   }
 
-  static Map<String, dynamic> _getDefaultConfig() {
-    if (Platform.isAndroid || Platform.isIOS) {
-      return {
-        'defaultScreenshotDirectory': _getMobileScreenshotPaths(),
-        'ollamaModelName': 'tinyllama',
-        'ollamaPrompt': 'Explain this image in detail.',
-        'serverTimeout': 5000,
-      };
-    }
+  static Future<Map<String, dynamic>> _getDefaultConfig() async {
     final home = Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
-        '';
+        '.';
+    final Map<String, dynamic> defaultScreenshotPaths = {};
+
+    if (Platform.isAndroid) {
+      defaultScreenshotPaths['android'] = {
+        'primary': '/storage/emulated/0/Pictures/Screenshots',
+        'dcim': '/storage/emulated/0/DCIM/Screenshots',
+        'downloads': '/storage/emulated/0/Download',
+      };
+    } else if (Platform.isIOS) {
+      defaultScreenshotPaths['ios'] = {
+        'primary': 'Photos/Screenshots',
+      };
+    } else {
+      defaultScreenshotPaths['windows'] =
+          '%USERPROFILE%\\Pictures\\Screenshots';
+      defaultScreenshotPaths['linux'] = '$home/Pictures/Screenshots';
+      defaultScreenshotPaths['macos'] = '$home/Pictures/Screenshots';
+    }
+
     return {
-      'defaultScreenshotDirectory': {
-        'windows': '%USERPROFILE%\\Pictures\\Screenshots',
-        'linux': '$home/Pictures/Screenshots',
-        'macos': '$home/Pictures/Screenshots',
-        'android': '/storage/emulated/0/Pictures/Screenshots',
-        'ios': 'Not supported yet'
+      'paths': {
+        'screenshots': defaultScreenshotPaths,
+        'database': path.join(home, '.notpixelshot', 'screenshots.db'),
+        'index': path.join(home, '.notpixelshot', 'index'),
+        'config': path.join(home, '.notpixelshot.json'),
       },
-      'ollamaModelName': 'tinyllama',
-      'ollamaPrompt': 'Explain this image in detail.',
-      'serverPort': 9876,
-      'configFilePath': '$home/.notpixelshot.json',
-      'serverTimeout': 5000,
+      'server': {
+        'port': 9876,
+        'timeout': 5000,
+      },
+      'ollama': {
+        'model': 'tinyllama',
+        'prompt': 'Explain this image in detail.',
+      },
+      'indexing': {
+        'extensions': ['.png', '.jpg', '.jpeg'],
+        'batch_size': 10,
+      },
     };
   }
 
@@ -242,5 +259,29 @@ class ConfigService {
       return {'ios': 'Photos/Screenshots'};
     }
     return {};
+  }
+
+  static String getScreenshotPath() {
+    final paths = configData['paths']['screenshots'];
+    if (Platform.isAndroid) {
+      return paths['android']['primary'];
+    } else if (Platform.isIOS) {
+      return paths['ios']['primary'];
+    } else if (Platform.isWindows) {
+      return paths['windows'].replaceAll(
+          '%USERPROFILE%', Platform.environment['USERPROFILE'] ?? '');
+    } else if (Platform.isMacOS) {
+      return paths['macos'];
+    } else {
+      return paths['linux'];
+    }
+  }
+
+  static String getDatabasePath() {
+    return configData['paths']['database'];
+  }
+
+  static String getIndexPath() {
+    return configData['paths']['index'];
   }
 }

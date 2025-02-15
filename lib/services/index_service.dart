@@ -13,44 +13,21 @@ class IndexService {
 
   static final ValueNotifier<int> totalScreenshotsNotifier = ValueNotifier(0);
 
-  static String get screenshotDirectoryWindows =>
-      ConfigService.configData['defaultScreenshotDirectory']['windows'];
-
-  static String get screenshotDirectoryMacOS =>
-      ConfigService.configData['defaultScreenshotDirectory']['macos'];
-
-  static String get screenshotDirectoryLinux =>
-      ConfigService.configData['defaultScreenshotDirectory']['linux'];
-
-  static String get screenshotDirectory =>
-      ConfigService.configData['defaultScreenshotDirectory']
-          [Platform.operatingSystem];
-
-  static String get _notpixelshotDir {
-    final home = Platform.environment['HOME'] ??
-        Platform.environment['USERPROFILE'] ??
-        '.';
-    return path.join(home, '.notpixelshot');
-  }
-
-  static String get _databasePath {
-    return path.join(_notpixelshotDir, 'screenshots.db');
-  }
-
-  static String get _indexPath {
-    return path.join(_notpixelshotDir, 'index');
-  }
+  static String get screenshotDirectory => ConfigService.getScreenshotPath();
+  static String get _databasePath => ConfigService.getDatabasePath();
+  static String get _indexPath => ConfigService.getIndexPath();
 
   static Future<void> initialize() async {
     try {
       print('IndexService: Initializing...');
 
-      // Create required directories
-      for (var dir in [
-        _notpixelshotDir,
-        path.dirname(_databasePath),
-        _indexPath
-      ]) {
+      // Create required directories from config
+      final paths = [
+        path.dirname(ConfigService.getDatabasePath()),
+        ConfigService.getIndexPath(),
+      ];
+
+      for (var dir in paths) {
         final directory = Directory(dir);
         if (!await directory.exists()) {
           await directory.create(recursive: true);
