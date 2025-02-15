@@ -222,28 +222,41 @@ class IndexService {
 
   static Future<List<Map<String, dynamic>>> getIndexedFiles() async {
     try {
-      // Get all files from the screenshots directory
-      final directory = Directory(screenshotDirectory);
-      if (!await directory.exists()) {
-        return [];
+      print('IndexService: Getting all indexed files...');
+      // First try to get files from database
+      final List<Map<String, dynamic>> dbFiles =
+          await database.query('screenshots');
+      print('IndexService: Found ${dbFiles.length} files in database');
+
+      if (dbFiles.isEmpty) {
+        // If no files in database, get from directory
+        print('IndexService: No files in database, scanning directory...');
+        final directory = Directory(screenshotDirectory);
+        if (!await directory.exists()) {
+          print('IndexService: Screenshot directory does not exist');
+          return [];
+        }
+
+        final files = await directory
+            .list()
+            .where((f) =>
+                f.path.toLowerCase().endsWith('.png') ||
+                f.path.toLowerCase().endsWith('.jpg'))
+            .map((f) => {
+                  'path': f.path,
+                  'platform': Platform.operatingSystem,
+                  'created_at': DateTime.now().millisecondsSinceEpoch,
+                })
+            .toList();
+
+        print('IndexService: Found ${files.length} files in directory');
+        totalScreenshotsNotifier.value = files.length;
+        return files;
       }
 
-      final files = await directory
-          .list()
-          .where((f) =>
-              f.path.toLowerCase().endsWith('.png') ||
-              f.path.toLowerCase().endsWith('.jpg'))
-          .map((f) => {
-                'path': f.path,
-                'platform': Platform.operatingSystem,
-                'created_at': DateTime.now().millisecondsSinceEpoch,
-              })
-          .toList();
-
-      // Update total count
-      totalScreenshotsNotifier.value = files.length;
-
-      return files;
+      print('IndexService: Returning ${dbFiles.length} indexed files');
+      totalScreenshotsNotifier.value = dbFiles.length;
+      return dbFiles;
     } catch (e, stackTrace) {
       print('IndexService: Error getting indexed files: $e');
       print('IndexService: Stack trace: $stackTrace');
@@ -254,58 +267,79 @@ class IndexService {
   static Future<List<Map<String, dynamic>>> searchScreenshots(
       String query) async {
     try {
+      print('IndexService: Searching screenshots for query: "$query"');
+
       if (query.trim().isEmpty) {
+        print('IndexService: Empty query, returning all files');
         return await getIndexedFiles();
       }
 
-      // Get all indexed screenshots
       final List<Map<String, dynamic>> allScreenshots =
           await database.query('screenshots');
+      print(
+          'IndexService: Found ${allScreenshots.length} total screenshots to search through');
 
-      // Create search options
-      final options = FuzzyOptions(
-        isCaseSensitive: false,
-        threshold: 0.4,
-        minMatchCharLength: 2,
-      );
+      if (allScreenshots.isEmpty) {
+        print('IndexService: No screenshots in database, returning all files');
+        return await getIndexedFiles();
+      }
 
-      // Calculate scores for each screenshot
-      final rankedResults = allScreenshots
-          .map((screenshot) {
-            final extractedText = screenshot['extracted_text'] as String? ?? '';
-            final ollamaDescription =
-                screenshot['ollama_description'] as String? ?? '';
-            final path = screenshot['path'] as String;
+      final List<Map<String, dynamic>> results = [];
 
-            // Calculate match scores
-            final textScore = _calculateScore(extractedText, query, options);
-            final descriptionScore =
-                _calculateScore(ollamaDescription, query, options);
-            final pathScore =
-                _calculateScore(path.split('/').last, query, options);
+      for (var screenshot in allScreenshots) {
+        final extractedText = screenshot['extracted_text'] as String? ?? '';
+        final ollamaDescription =
+            screenshot['ollama_description'] as String? ?? '';
+        final path = screenshot['path'] as String;
+        final fileName = path.split(Platform.pathSeparator).last.toLowerCase();
+        final searchTerm = query.toLowerCase();
 
-            // Weighted scoring (prioritize text content)
-            final totalScore =
-                textScore * 0.6 + descriptionScore * 0.3 + pathScore * 0.1;
+        bool matches = false;
+        double score = 0.0;
 
-            return {
-              ...screenshot,
-              'score': totalScore,
-            };
-          })
-          .where((item) => (item['score'] as double) > 0)
-          .toList();
+        // Check for matches in extracted text
+        if (extractedText.toLowerCase().contains(searchTerm)) {
+          matches = true;
+          score += 3.0;
+        }
+
+        // Check for matches in Ollama description
+        if (ollamaDescription.toLowerCase().contains(searchTerm)) {
+          matches = true;
+          score += 2.0;
+        }
+
+        // Check filename
+        if (fileName.contains(searchTerm)) {
+          matches = true;
+          score += 1.0;
+        }
+
+        if (matches) {
+          results.add({
+            ...screenshot,
+            'search_score': score,
+          });
+        }
+      }
+
+      print('IndexService: Found ${results.length} matching screenshots');
 
       // Sort by score
-      rankedResults.sort(
-          (a, b) => (b['score'] as double).compareTo(a['score'] as double));
+      results.sort((a, b) =>
+          (b['search_score'] as double).compareTo(a['search_score'] as double));
 
-      // Remove score from final results
-      return rankedResults
-          .map((item) => Map<String, dynamic>.from(item)..remove('score'))
-          .toList();
+      // Remove search score before returning
+      final finalResults = results.map((r) {
+        final map = Map<String, dynamic>.from(r);
+        map.remove('search_score');
+        return map;
+      }).toList();
+
+      print('IndexService: Returning ${finalResults.length} sorted results');
+      return finalResults;
     } catch (e, stackTrace) {
-      print('IndexService: Error searching screenshots: $e');
+      print('IndexService: Error during search: $e');
       print('IndexService: Stack trace: $stackTrace');
       return [];
     }

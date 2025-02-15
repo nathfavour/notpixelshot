@@ -20,26 +20,28 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize with all screenshots
     _loadAllScreenshots();
   }
 
   Future<void> _loadAllScreenshots() async {
-    _searchResultsFuture = IndexService.getIndexedFiles();
-    setState(() {}); // Trigger rebuild with loaded screenshots
+    print('SearchScreen: Loading all screenshots...');
+    setState(() {
+      _searchResultsFuture = IndexService.getIndexedFiles();
+    });
   }
 
   void _onSearch(String query) {
-    // Cancel previous timer if it exists
+    print('SearchScreen: Search query received: "$query"');
     _debounceTimer?.cancel();
 
-    // Set a debounce timer to avoid too frequent searches
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       setState(() {
         _searchQuery = query;
         if (query.trim().isEmpty) {
+          print('SearchScreen: Empty query, loading all screenshots');
           _searchResultsFuture = IndexService.getIndexedFiles();
         } else {
+          print('SearchScreen: Searching for: "$query"');
           _searchResultsFuture = IndexService.searchScreenshots(query);
         }
       });
@@ -82,24 +84,28 @@ class _SearchScreenState extends State<SearchScreen> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 } else if (snapshot.hasError) {
+                  print('SearchScreen: Error loading results: ${snapshot.error}');
                   return Center(child: Text('Error: ${snapshot.error}'));
                 } else if (snapshot.hasData) {
                   final searchResults = snapshot.data!;
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
+                  print('SearchScreen: Displaying ${searchResults.length} results');
+                  return Padding(ror}');
+                    padding: const EdgeInsets.all(16),rror: ${snapshot.error}'));
                     child: ScreenshotGrid(
                       searchQuery: _searchQuery,
                       searchResults: searchResults,
-                    ),
+                    ),chResults.length} results');
                   );
-                } else {
-                  return const Center(child: Text('No results found.'));
-                }
+                } else {l(16),
+                  print('SearchScreen: No results found');
+                  return const Center(child: Text('No results found.'));searchQuery: _searchQuery,
+                }  searchResults: searchResults,
               },
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ], print('SearchScreen: No results found');
+      ),  return const Center(child: Text('No results found.'));
+    );  }
+  }  },
+}  ),
 }
