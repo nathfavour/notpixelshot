@@ -37,6 +37,8 @@ Future<void> _initializeServices() async {
 
     // Start processing automatically without blocking the UI
     await IndexService.startProcessing();
+    // Refresh the total screenshots count after processing is complete
+    await IndexService._updateTotalScreenshotsCount();
   } catch (e, stackTrace) {
     print('Error during service initialization: $e');
     print('Stack trace: $stackTrace');

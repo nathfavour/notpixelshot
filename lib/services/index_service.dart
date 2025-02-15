@@ -211,6 +211,11 @@ class IndexService {
   static Future<List<Map<String, dynamic>>> getIndexedFiles() async {
     try {
       print('IndexService: Getting all indexed files...');
+      // Ensure database is initialized
+      if (!database.isOpen) {
+        print('IndexService: Database not yet open, re-initializing...');
+        await initialize(); // Re-initialize if not open
+      }
       final List<Map<String, dynamic>> allFiles = [];
 
       // Get files from directory first
