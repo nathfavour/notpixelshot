@@ -62,20 +62,30 @@ class NetworkService {
 
   static Future<String?> findServer() async {
     final timeout = ConfigService.configData['serverTimeout'] ?? 5000;
+    final hosts = [
+      '10.0.2.2', // Android emulator
+      'localhost',
+      '127.0.0.1',
+      '0.0.0.0',
+    ];
 
-    for (int port = 9876; port <= 9900; port++) {
+    for (var host in hosts) {
       try {
         final response = await http
-            .get(Uri.parse('http://0.0.0.0:$port/api/status'))
+            .get(Uri.parse('http://$host:9876/api/status'))
             .timeout(Duration(milliseconds: timeout));
 
         if (response.statusCode == 200) {
-          return '0.0.0.0:$port';
+          print('Found server at $host:9876');
+          return host;
         }
-      } catch (_) {
+      } catch (e) {
+        print('Failed to connect to $host:9876 - trying next host');
         continue;
       }
     }
+
+    print('No server found after trying all hosts');
     return null;
   }
 }

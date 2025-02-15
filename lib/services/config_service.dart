@@ -16,55 +16,61 @@ class ConfigService {
     // Initialize config data
     configData = _getDefaultConfig();
 
-    // Request storage permission only on Android
-    if (Platform.isAndroid) {
-      try {
-        final status = await Permission.storage.status;
-        if (status.isDenied) {
-          // Show permission dialog
-          final result = await showPermissionDialog();
-          if (result == true) {
-            final newStatus = await Permission.storage.request();
-            if (newStatus.isGranted) {
-              print('Storage permission granted on mobile.');
-            } else {
-              print('Storage permission denied on mobile.');
-            }
-          }
-        }
-      } catch (e) {
-        debugPrint('Error requesting storage permission: $e');
-      }
-    }
-
-    // Only try to sync config from server on mobile
     if (Platform.isAndroid || Platform.isIOS) {
-      await _syncConfigFromServer();
+      // Wait for app to be ready before requesting permissions
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _requestPermissions();
+        await _syncConfigFromServer();
+      });
     }
 
     configNotifier.value = configData;
   }
 
-  static Future<void> _syncConfigFromServer() async {
+  static Future<void> _requestPermissions() async {
     try {
-      // Try to discover server on network
-      final serverAddress = await NetworkService.findServer();
-      if (serverAddress == null) {
-        print('No server found on network');
+      final context = navigatorKey.currentContext;
+      if (context == null) {
+        print('No context available for permission dialog');
         return;
       }
 
-      final response = await http
-          .get(Uri.parse('http://$serverAddress/api/config'))
-          .timeout(const Duration(seconds: 5));
+      final status = await Permission.storage.status;
+      if (!status.isGranted) {
+        final result = await showPermissionDialog(context);
+        if (result == true) {
+          // Request both permissions
+          await [
+            Permission.storage,
+            Permission.manageExternalStorage,
+          ].request();
+          print('Storage permissions requested successfully');
+        }
+      }
+    } catch (e) {
+      print('Error requesting permissions: $e');
+    }
+  }
+
+  static Future<void> _syncConfigFromServer() async {
+    try {
+      // First try localhost for emulator
+      String host = '10.0.2.2';
+
+      // If that fails, try local network
+      var response = await http
+          .get(Uri.parse('http://$host:9876/api/config'))
+          .timeout(const Duration(seconds: 2))
+          .catchError((_) async {
+        host = await NetworkService.findServer() ?? '0.0.0.0';
+        return await http.get(Uri.parse('http://$host:9876/api/config'));
+      });
 
       if (response.statusCode == 200) {
         final syncedConfig = jsonDecode(response.body);
-        configData = syncedConfig;
+        configData.addAll(syncedConfig);
         configNotifier.value = configData;
         print('Config synced from server: $configData');
-      } else {
-        print('Failed to sync config: ${response.statusCode}');
       }
     } catch (e) {
       print('Error syncing config: $e');

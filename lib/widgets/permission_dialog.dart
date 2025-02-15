@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../main.dart'; // Import navigatorKey
 
-Future<bool?> showPermissionDialog() {
+Future<bool?> showPermissionDialog(BuildContext context) {
   return showDialog<bool>(
-    context: navigatorKey.currentContext!,
+    context: context,
+    barrierDismissible: false,
     builder: (context) => AlertDialog(
       title: const Text('Storage Permission Required'),
       content: const Text(
