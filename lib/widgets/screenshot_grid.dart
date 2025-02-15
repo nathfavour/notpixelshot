@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 import '../services/index_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:process_run/shell.dart';
 
 class ScreenshotGrid extends StatefulWidget {
   final String searchQuery;
@@ -73,6 +74,39 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
     }
   }
 
+  Future<void> _openFileWithSystemViewer(String filePath) async {
+    try {
+      if (Platform.isLinux) {
+        await Process.run('xdg-open', [filePath]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', [filePath]);
+      } else if (Platform.isWindows) {
+        await Process.run('cmd', ['/c', 'start', '', filePath]);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error opening file: $e');
+      }
+    }
+  }
+
+  Future<void> _openFileLocation(String filePath) async {
+    try {
+      final directory = File(filePath).parent.path;
+      if (Platform.isLinux) {
+        await Process.run('xdg-open', [directory]);
+      } else if (Platform.isMacOS) {
+        await Process.run('open', [directory]);
+      } else if (Platform.isWindows) {
+        await Process.run('explorer.exe', ['/select,', filePath]);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error opening file location: $e');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Provide a default value (empty list) when widget.searchResults is null
@@ -110,18 +144,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
               child: Stack(
                 children: [
                   GestureDetector(
-                    onTap: () async {
-                      // Open the image file with the system's default image viewer
-                      final Uri imageFileUri = Uri.file(filePath);
-                      if (await canLaunchUrl(imageFileUri)) {
-                        await launchUrl(imageFileUri);
-                      } else {
-                        if (kDebugMode) {
-                          print('Could not launch $imageFileUri');
-                        }
-                        // Optionally show an error message to the user
-                      }
-                    },
+                    onTap: () => _openFileWithSystemViewer(filePath),
                     child: Image.file(
                       File(filePath),
                       fit: BoxFit.cover,
@@ -135,20 +158,8 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
                     right: 4,
                     top: 4,
                     child: IconButton(
-                      onPressed: () async {
-                        // Open the file in the system's file explorer
-                        final Uri fileExplorerUri =
-                            Uri.directory(File(filePath).parent.path);
-                        if (await canLaunchUrl(fileExplorerUri)) {
-                          await launchUrl(fileExplorerUri);
-                        } else {
-                          if (kDebugMode) {
-                            print('Could not launch $fileExplorerUri');
-                          }
-                          // Optionally show an error message to the user
-                        }
-                      },
                       icon: const Icon(Icons.folder_open),
+                      onPressed: () => _openFileLocation(filePath),
                     ),
                   ),
                   if (isIndexed)
