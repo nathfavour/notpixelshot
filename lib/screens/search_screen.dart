@@ -32,19 +32,11 @@ class _SearchScreenState extends State<SearchScreen> {
 
   void _onSearch(String query) {
     print('SearchScreen: Search query received: "$query"');
-    _debounceTimer?.cancel();
-
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      setState(() {
-        _searchQuery = query;
-        if (query.trim().isEmpty) {
-          print('SearchScreen: Empty query, loading all screenshots');
-          _searchResultsFuture = IndexService.getIndexedFiles();
-        } else {
-          print('SearchScreen: Searching for: "$query"');
-          _searchResultsFuture = IndexService.searchScreenshots(query);
-        }
-      });
+    setState(() {
+      _searchQuery = query;
+      _searchResultsFuture = query.trim().isEmpty
+          ? IndexService.getIndexedFiles()
+          : IndexService.searchScreenshots(query);
     });
   }
 
