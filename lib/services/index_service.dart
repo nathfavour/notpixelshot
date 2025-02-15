@@ -221,7 +221,28 @@ class IndexService {
 
   static Future<List<Map<String, dynamic>>> getIndexedFiles() async {
     try {
-      return await database.query('screenshots');
+      // Get all files from the screenshots directory
+      final directory = Directory(screenshotDirectory);
+      if (!await directory.exists()) {
+        return [];
+      }
+
+      final files = await directory
+          .list()
+          .where((f) =>
+              f.path.toLowerCase().endsWith('.png') ||
+              f.path.toLowerCase().endsWith('.jpg'))
+          .map((f) => {
+                'path': f.path,
+                'platform': Platform.operatingSystem,
+                'created_at': DateTime.now().millisecondsSinceEpoch,
+              })
+          .toList();
+
+      // Update total count
+      totalScreenshotsNotifier.value = files.length;
+
+      return files;
     } catch (e, stackTrace) {
       print('IndexService: Error getting indexed files: $e');
       print('IndexService: Stack trace: $stackTrace');

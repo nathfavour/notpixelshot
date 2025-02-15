@@ -18,22 +18,22 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     super.initState();
-    // Load all screenshots initially
-    _loadInitialData();
+    // Initialize with all screenshots
+    _loadAllScreenshots();
   }
 
-  Future<void> _loadInitialData() async {
+  Future<void> _loadAllScreenshots() async {
     _searchResultsFuture = IndexService.getIndexedFiles();
+    setState(() {}); // Trigger rebuild with loaded screenshots
   }
 
   void _onSearch(String query) {
     setState(() {
       _searchQuery = query;
-      if (query.isEmpty) {
-        // If the query is empty, load all screenshots
+      if (query.trim().isEmpty) {
+        // Load all screenshots when search is empty
         _searchResultsFuture = IndexService.getIndexedFiles();
       } else {
-        // Otherwise, perform the search
         _searchResultsFuture = IndexService.searchScreenshots(query);
       }
     });
