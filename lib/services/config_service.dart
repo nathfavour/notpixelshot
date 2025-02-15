@@ -48,6 +48,21 @@ class ConfigService {
     }
   }
 
+  // Add public method to reload config
+  static Future<void> reloadConfigFromFile() async {
+    try {
+      final file = File(_configFilePath);
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        configData = jsonDecode(content);
+        configNotifier.value = configData;
+        print('Reloaded config from file: $configData');
+      }
+    } catch (e) {
+      print('Error reloading config file: $e');
+    }
+  }
+
   static void _watchConfigFile() {
     _configFileWatcher?.cancel();
     final file = File(_configFilePath);
