@@ -108,6 +108,10 @@ class IndexService {
     }
   }
 
+  static Future<void> updateTotalScreenshotsCount() async {
+    await _updateTotalScreenshotsCount();
+  }
+
   static Future<void> _startProcessing() async {
     try {
       final directoryPath = screenshotDirectory;
