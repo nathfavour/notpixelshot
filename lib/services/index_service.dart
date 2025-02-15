@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:path/path.dart' as path;
 import '../services/config_service.dart';
 
 class IndexService {
@@ -25,30 +25,51 @@ class IndexService {
       ConfigService.configData['defaultScreenshotDirectory']
           [Platform.operatingSystem];
 
+  static String get _databasePath {
+    final home = Platform.environment['HOME'] ??
+        Platform.environment['USERPROFILE'] ??
+        '.';
+    final dbDir = path.join(home, '.notpixelshot');
+    return path.join(dbDir, 'screenshots.db');
+  }
+
   static Future<void> initialize() async {
+    // Ensure database directory exists
+    final dbFile = File(_databasePath);
+    if (!await dbFile.parent.exists()) {
+      await dbFile.parent.create(recursive: true);
+    }
+
     // Initialize SQLite database
-    database = await openDatabase(
-      join(await getDatabasesPath(), 'notpixelshot.db'),
-      onCreate: (db, version) async {
-        await db.execute('''
-          CREATE TABLE screenshots(
-            id TEXT PRIMARY KEY,
-            path TEXT,
-            extracted_text TEXT,
-            ollama_description TEXT,
-            platform TEXT,
-            created_at INTEGER
-          )
-        ''');
-      },
-      version: 1,
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
+    database = await databaseFactoryFfi.openDatabase(
+      _databasePath,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, version) async {
+          await db.execute('''
+            CREATE TABLE screenshots(
+              id TEXT PRIMARY KEY,
+              path TEXT,
+              extracted_text TEXT,
+              ollama_description TEXT,
+              platform TEXT,
+              created_at INTEGER
+            )
+          ''');
+        },
+      ),
     );
 
     // Initialize total screenshots count
-    _updateTotalScreenshotsCount();
+    await _updateTotalScreenshotsCount();
 
     // Start processing screenshots immediately
-    _startProcessing();
+    await _startProcessing();
   }
 
   static Future<void> _updateTotalScreenshotsCount() async {

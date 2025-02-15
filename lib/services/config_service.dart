@@ -19,7 +19,8 @@ class ConfigService {
     final home = Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
         '.';
-    return path.join(home, '.notpixelshot.json');
+    final configDir = path.join(home, '.notpixelshot');
+    return path.join(configDir, 'config.json');
   }
 
   static Future<void> initialize() async {
@@ -133,10 +134,10 @@ class ConfigService {
   static Future<void> _saveConfig(
       File file, Map<String, dynamic> config) async {
     try {
-      // Ensure parent directory exists
-      final parent = file.parent;
-      if (!await parent.exists()) {
-        await parent.create(recursive: true);
+      // Ensure config directory exists
+      final configDir = file.parent;
+      if (!await configDir.exists()) {
+        await configDir.create(recursive: true);
       }
 
       await file.writeAsString(jsonEncode(config), flush: true);
