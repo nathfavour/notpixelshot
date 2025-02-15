@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../widgets/search_bar.dart';
 import '../widgets/screenshot_grid.dart';
 import '../widgets/processing_status.dart';
+import '../services/index_service.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({Key? key}) : super(key: key);
@@ -12,17 +13,25 @@ class SearchScreen extends StatefulWidget {
 
 class _SearchScreenState extends State<SearchScreen> {
   String _searchQuery = '';
-  bool _isLoading = false;
+  Future<List<Map<String, dynamic>>>? _searchResultsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    // Load all screenshots initially
+    _searchResultsFuture = IndexService.getIndexedFiles();
+  }
 
   void _onSearch(String query) {
     setState(() {
       _searchQuery = query;
-      _isLoading = true;
-    });
-    // Trigger search in IndexService
-    // Update UI when results are available
-    setState(() {
-      _isLoading = false;
+      if (query.isEmpty) {
+        // If the query is empty, load all screenshots
+        _searchResultsFuture = IndexService.getIndexedFiles();
+      } else {
+        // Otherwise, perform the search
+        _searchResultsFuture = IndexService.searchScreenshots(query);
+      }
     });
   }
 
@@ -37,7 +46,6 @@ class _SearchScreenState extends State<SearchScreen> {
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),
-          // Removed play arrow button
         ],
       ),
       body: Column(
@@ -51,12 +59,27 @@ class _SearchScreenState extends State<SearchScreen> {
             child: const ProcessingStatus(),
           ),
           Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Padding(
+            child: FutureBuilder<List<Map<String, dynamic>>>(
+              future: _searchResultsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (snapshot.hasData) {
+                  final searchResults = snapshot.data!;
+                  return Padding(
                     padding: const EdgeInsets.all(16),
-                    child: ScreenshotGrid(searchQuery: _searchQuery),
-                  ),
+                    child: ScreenshotGrid(
+                      searchQuery: _searchQuery,
+                      searchResults: searchResults,
+                    ),
+                  );
+                } else {
+                  return const Center(child: Text('No results found.'));
+                }
+              },
+            ),
           ),
         ],
       ),

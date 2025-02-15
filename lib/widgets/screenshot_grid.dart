@@ -5,8 +5,11 @@ import '../services/index_service.dart';
 
 class ScreenshotGrid extends StatefulWidget {
   final String searchQuery;
+  final List<Map<String, dynamic>>? searchResults;
 
-  const ScreenshotGrid({Key? key, required this.searchQuery}) : super(key: key);
+  const ScreenshotGrid(
+      {Key? key, required this.searchQuery, this.searchResults})
+      : super(key: key);
 
   @override
   State<ScreenshotGrid> createState() => _ScreenshotGridState();
@@ -94,10 +97,13 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
 
   @override
   Widget build(BuildContext context) {
+    final filesToShow =
+        widget.searchResults ?? _files.map((e) => {'path': e.path}).toList();
+
     return ValueListenableBuilder<int>(
       valueListenable: IndexService.totalScreenshotsNotifier,
       builder: (context, totalScreenshots, child) {
-        if (_files.isEmpty) {
+        if (totalScreenshots == 0) {
           final dirPath = _getScreenshotDirectory();
           return Center(
             child: Text('No screenshots found in:\n$dirPath',
@@ -105,7 +111,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
           );
         }
         return GridView.builder(
-          itemCount: _files.length,
+          itemCount: filesToShow.length,
           physics: const AlwaysScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 4,
@@ -113,18 +119,24 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
             crossAxisSpacing: 4,
           ),
           itemBuilder: (context, index) {
-            final file = _files[index];
-            final isIndexed = _indexedFiles.contains(file.path);
+            final file = filesToShow[index];
+            final filePath = file['path'] as String;
+            final isIndexed = _indexedFiles.contains(filePath);
+            final isHighlighted = widget.searchQuery.isNotEmpty &&
+                filePath
+                    .toLowerCase()
+                    .contains(widget.searchQuery.toLowerCase());
 
             return GestureDetector(
               onTap: () {
                 // Show fullscreen preview
               },
               child: Card(
+                color: isHighlighted ? Colors.yellow[100] : null,
                 child: Stack(
                   children: [
                     Image.file(
-                      File(file.path),
+                      File(filePath),
                       fit: BoxFit.cover,
                       width: double.infinity,
                       height: double.infinity,

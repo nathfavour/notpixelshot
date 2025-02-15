@@ -229,6 +229,44 @@ class IndexService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> searchScreenshots(
+      String query) async {
+    try {
+      print('IndexService: Searching screenshots for query: $query');
+
+      // Basic LIKE search
+      final List<Map<String, dynamic>> results = await database.query(
+        'screenshots',
+        where:
+            'extracted_text LIKE ? OR ollama_description LIKE ? OR path LIKE ?',
+        whereArgs: ['%$query%', '%$query%', '%$query%'],
+      );
+
+      // TODO: Implement ranking logic here based on number of matches, closeness, etc.
+      // This is a placeholder, replace with actual ranking implementation.
+      results.sort((a, b) {
+        // Example: prioritize results where the query appears earlier in the text
+        final aText = (a['extracted_text'] as String).toLowerCase();
+        final bText = (b['extracted_text'] as String).toLowerCase();
+        final aIndex = aText.indexOf(query.toLowerCase());
+        final bIndex = bText.indexOf(query.toLowerCase());
+
+        if (aIndex == -1 && bIndex == -1) return 0;
+        if (aIndex == -1) return 1;
+        if (bIndex == -1) return -1;
+
+        return aIndex.compareTo(bIndex);
+      });
+
+      print('IndexService: Found ${results.length} results');
+      return results;
+    } catch (e, stackTrace) {
+      print('IndexService: Error searching screenshots: $e');
+      print('IndexService: Stack trace: $stackTrace');
+      return [];
+    }
+  }
+
   static void monitorDirectory(
       Directory directory, void Function(FileSystemEvent) onEvent) {
     directory.watch().listen((event) async {
