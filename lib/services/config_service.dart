@@ -11,54 +11,61 @@ class ConfigService {
       ValueNotifier({}); // live sync notifier
 
   static Future<void> initialize() async {
+    // Initialize config data
+    configData = _getDefaultConfig();
+
     // Request storage permission only on Android
     if (Platform.isAndroid) {
       try {
-        final status = await Permission.storage.request();
-        if (status.isGranted) {
-          print('Storage permission granted on mobile.');
-        } else {
-          print('Storage permission not granted on mobile.');
-          // Optionally show a dialog to the user explaining why the permission is needed
+        final status = await Permission.storage.status;
+        if (status.isDenied) {
+          // Show permission dialog
+          final result = await showPermissionDialog();
+          if (result == true) {
+            final newStatus = await Permission.storage.request();
+            if (newStatus.isGranted) {
+              print('Storage permission granted on mobile.');
+            } else {
+              print('Storage permission denied on mobile.');
+            }
+          }
         }
       } catch (e) {
-        // Handle the exception, e.g., log it or show an error message
         debugPrint('Error requesting storage permission: $e');
       }
     }
 
-    // Initialize config data
-    configData = _getDefaultConfig();
+    // Only try to sync config from server on mobile
+    if (Platform.isAndroid || Platform.isIOS) {
+      await _syncConfigFromServer();
+    }
 
-    // Sync config from server
-    await _syncConfigFromServer();
-
-    configNotifier.value = configData; // update live notifier
+    configNotifier.value = configData;
   }
 
   static Future<void> _syncConfigFromServer() async {
     try {
-      // Use the correct host address for syncing the configuration
-      String host = '0.0.0.0';
+      // Try to discover server on network
+      final serverAddress = await NetworkService.findServer();
+      if (serverAddress == null) {
+        print('No server found on network');
+        return;
+      }
+
       final response = await http
-          .get(Uri.parse('http://$host:9876/config'))
-          .timeout(const Duration(seconds: 5)); // Add timeout
+          .get(Uri.parse('http://$serverAddress/api/config'))
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final syncedConfig = jsonDecode(response.body);
         configData = syncedConfig;
-        configNotifier.value = configData; // Update notifier with synced config
+        configNotifier.value = configData;
         print('Config synced from server: $configData');
       } else {
-        print(
-            'Failed to sync config from server. Status code: ${response.statusCode}');
-        // Use default config if sync fails
-        configNotifier.value = configData;
+        print('Failed to sync config: ${response.statusCode}');
       }
     } catch (e) {
-      print('Error syncing config from server: $e');
-      // Use default config if sync fails
-      configNotifier.value = configData;
+      print('Error syncing config: $e');
     }
   }
 
