@@ -63,11 +63,8 @@ class IndexService {
       );
       print('IndexService: Database opened successfully');
 
-      // Initialize total screenshots count
+      // Initialize total screenshots count and progress
       await _updateTotalScreenshotsCount();
-
-      // Start processing screenshots immediately
-      await _startProcessing();
 
       print('IndexService: Initialization complete');
     } catch (e, stackTrace) {
@@ -92,8 +89,19 @@ class IndexService {
               f.path.toLowerCase().endsWith('.jpg'))
           .toList();
 
+      // Get the count of indexed files
+      final List<Map<String, dynamic>> result =
+          await database.rawQuery('SELECT COUNT(*) as count FROM screenshots');
+      final indexedCount = result.first['count'] as int? ?? 0;
+
       totalScreenshotsNotifier.value = files.length;
-      print('IndexService: Total screenshots count updated: ${files.length}');
+      progressNotifier.value = progressNotifier.value.copyWith(
+        total: files.length,
+        processed: indexedCount,
+      );
+
+      print(
+          'IndexService: Total screenshots: ${files.length}, Indexed: $indexedCount');
     } catch (e, stackTrace) {
       print('IndexService: Error updating total screenshots count: $e');
       print('IndexService: Stack trace: $stackTrace');
