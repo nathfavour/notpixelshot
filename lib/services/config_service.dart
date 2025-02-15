@@ -1,20 +1,21 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
-import 'package:flutter/foundation.dart'; // for ValueNotifier
-import 'package:flutter/material.dart'; // for debugPrint
-import '../main.dart'; // Import for navigatorKey
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import '../main.dart';
 import 'package:notpixelshot/services/network_service.dart';
 import 'package:notpixelshot/widgets/permission_dialog.dart';
-import 'package:permission_handler/permission_handler.dart'; // for requesting file permissions on mobile
+import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 
 class ConfigService {
   static late Map<String, dynamic> configData;
   static final ValueNotifier<Map<String, dynamic>> configNotifier =
-      ValueNotifier({}); // live sync notifier
+      ValueNotifier({});
   static StreamSubscription? _configFileWatcher;
+
   static String get _configFilePath {
     final home = Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
@@ -24,46 +25,63 @@ class ConfigService {
   }
 
   static Future<void> initialize() async {
-    if (Platform.isAndroid || Platform.isIOS) {
-      // Mobile platforms sync from server
-      await _syncConfigFromServer();
-    } else {
-      // Desktop platforms read from file and watch for changes
-      await _loadConfigFromFile();
-      _watchConfigFile();
+    try {
+      print('ConfigService: Initializing...');
+      configData = _getDefaultConfig();
+      print('ConfigService: Default config loaded');
+
+      if (Platform.isAndroid || Platform.isIOS) {
+        print('ConfigService: Running on mobile, syncing from server...');
+        await _syncConfigFromServer();
+      } else {
+        print('ConfigService: Running on desktop, loading from file...');
+        await _loadConfigFromFile();
+        _watchConfigFile();
+      }
+
+      configNotifier.value = configData;
+      print('ConfigService: Initialization complete');
+    } catch (e, stackTrace) {
+      print('ConfigService: Error during initialization: $e');
+      print('ConfigService: Stack trace: $stackTrace');
+      configNotifier.value =
+          configData; // Ensure notifier is updated even on error
     }
-    configNotifier.value = configData;
   }
 
   static Future<void> _loadConfigFromFile() async {
     try {
+      print('ConfigService: Loading config from file...');
       final file = File(_configFilePath);
       if (await file.exists()) {
         final content = await file.readAsString();
         configData = jsonDecode(content);
-        print('Loaded config from file: $configData');
+        print('ConfigService: Loaded config from file: $configData');
       } else {
+        print('ConfigService: Config file not found, creating default...');
         configData = _getDefaultConfig();
         await _saveConfig(file, configData);
+        print('ConfigService: Default config created');
       }
-    } catch (e) {
-      print('Error loading config file: $e');
-      configData = _getDefaultConfig();
+    } catch (e, stackTrace) {
+      print('ConfigService: Error loading config file: $e');
+      print('ConfigService: Stack trace: $stackTrace');
     }
   }
 
-  // Add public method to reload config
   static Future<void> reloadConfigFromFile() async {
     try {
+      print('ConfigService: Reloading config from file...');
       final file = File(_configFilePath);
       if (await file.exists()) {
         final content = await file.readAsString();
         configData = jsonDecode(content);
         configNotifier.value = configData;
-        print('Reloaded config from file: $configData');
+        print('ConfigService: Reloaded config from file: $configData');
       }
-    } catch (e) {
-      print('Error reloading config file: $e');
+    } catch (e, stackTrace) {
+      print('ConfigService: Error reloading config file: $e');
+      print('ConfigService: Stack trace: $stackTrace');
     }
   }
 
@@ -71,7 +89,7 @@ class ConfigService {
     _configFileWatcher?.cancel();
     final file = File(_configFilePath);
     _configFileWatcher = file.watch().listen((event) async {
-      print('Config file changed, reloading...');
+      print('ConfigService: Config file changed, reloading...');
       await _loadConfigFromFile();
       configNotifier.value = configData;
     });
@@ -80,7 +98,7 @@ class ConfigService {
   static Future<void> _requestPermissions() async {
     try {
       if (navigatorKey.currentContext == null) {
-        print('No context available for permission dialog');
+        print('ConfigService: No context available for permission dialog');
         return;
       }
 
@@ -90,19 +108,21 @@ class ConfigService {
         if (result == true) {
           await Permission.manageExternalStorage.request();
           await Permission.storage.request();
-          print('Storage permissions requested successfully');
+          print('ConfigService: Storage permissions requested successfully');
         }
       }
-    } catch (e) {
-      print('Error requesting permissions: $e');
+    } catch (e, stackTrace) {
+      print('ConfigService: Error requesting permissions: $e');
+      print('ConfigService: Stack trace: $stackTrace');
     }
   }
 
   static Future<void> _syncConfigFromServer() async {
     try {
+      print('ConfigService: Syncing config from server...');
       final serverHost = await NetworkService.findServer();
       if (serverHost == null) {
-        print('No server found on network');
+        print('ConfigService: No server found on network');
         return;
       }
 
@@ -115,10 +135,13 @@ class ConfigService {
         final syncedConfig = jsonDecode(response.body);
         configData.addAll(syncedConfig);
         configNotifier.value = configData;
-        print('Config synced from server at $serverHost');
+        print('ConfigService: Config synced from server at $serverHost');
+      } else {
+        print('ConfigService: Failed to sync config: ${response.statusCode}');
       }
-    } catch (e) {
-      print('Error syncing config: $e');
+    } catch (e, stackTrace) {
+      print('ConfigService: Error syncing config: $e');
+      print('ConfigService: Stack trace: $stackTrace');
     }
   }
 
@@ -142,8 +165,9 @@ class ConfigService {
 
       await file.writeAsString(jsonEncode(config), flush: true);
       print('Config saved to ${file.path}');
-    } catch (e) {
-      print('Failed to save config: $e');
+    } catch (e, stackTrace) {
+      print('ConfigService: Failed to save config: $e');
+      print('ConfigService: Stack trace: $stackTrace');
     }
   }
 

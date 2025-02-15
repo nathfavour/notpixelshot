@@ -7,23 +7,44 @@ import 'services/index_service.dart';
 import 'screens/search_screen.dart';
 import 'screens/settings_screen.dart';
 
-export 'main.dart' show navigatorKey; // Export navigatorKey
+export 'main.dart' show navigatorKey;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    print('WidgetsFlutterBinding initialized');
 
-  // Initialize FFI for sqflite on desktop platforms
-  if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
+    // Initialize FFI for sqflite on desktop platforms
+    if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      print('sqflite FFI initialized');
+    }
+
+    print('Initializing ConfigService...');
+    await ConfigService.initialize();
+    print('ConfigService initialized');
+
+    if (!Platform.isAndroid && !Platform.isIOS) {
+      print('Initializing NetworkService...');
+      await NetworkService.initialize();
+      print('NetworkService initialized');
+    }
+
+    print('Initializing IndexService...');
+    await IndexService.initialize();
+    print('IndexService initialized');
+
+    print('Running MyApp...');
+    runApp(const MyApp());
+    print('MyApp is running');
+  } catch (e, stackTrace) {
+    print('Error during initialization: $e');
+    print('Stack trace: $stackTrace');
+    rethrow;
   }
-
-  await ConfigService.initialize();
-  await NetworkService.initialize();
-  await IndexService.initialize();
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

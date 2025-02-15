@@ -12,60 +12,81 @@ class NetworkService {
   static List<String> _discoveredHosts = [];
 
   static Future<void> initialize() async {
-    // Only desktop platforms should start a server
-    if (Platform.isAndroid || Platform.isIOS) {
-      return;
-    }
-
-    int port = 9876;
-    bool serverRunning = false;
-    HttpServer? server;
-
-    while (!serverRunning && port <= 9900) {
-      try {
-        server = await HttpServer.bind(InternetAddress.anyIPv4, port);
-        serverRunning = true;
-
-        server.listen((HttpRequest request) {
-          _handleRequest(request, port);
-        });
-
-        print('Server started on port $port');
-      } catch (e) {
-        print('Failed to bind port $port: $e');
-        port++;
+    try {
+      print('NetworkService: Initializing...');
+      // Only desktop platforms should start a server
+      if (Platform.isAndroid || Platform.isIOS) {
+        print(
+            'NetworkService: Running on mobile, skipping server initialization');
+        return;
       }
+
+      int port = 9876;
+      bool serverRunning = false;
+      HttpServer? server;
+
+      while (!serverRunning && port <= 9900) {
+        try {
+          server = await HttpServer.bind(InternetAddress.anyIPv4, port);
+          serverRunning = true;
+
+          server.listen((HttpRequest request) {
+            _handleRequest(request, port);
+          });
+
+          print('NetworkService: Server started on port $port');
+        } catch (e, stackTrace) {
+          print('NetworkService: Failed to bind port $port: $e');
+          print('NetworkService: Stack trace: $stackTrace');
+          port++;
+        }
+      }
+
+      if (!serverRunning) {
+        print(
+            'NetworkService: Failed to start server on any port between 9876 and 9900.');
+      }
+      print('NetworkService: Initialization complete');
+    } catch (e, stackTrace) {
+      print('NetworkService: Error during initialization: $e');
+      print('NetworkService: Stack trace: $stackTrace');
     }
   }
 
   static Future<void> _handleRequest(HttpRequest request, int port) async {
-    print('Request received on port $port: ${request.uri.path}');
+    try {
+      print(
+          'NetworkService: Request received on port $port: ${request.uri.path}');
 
-    switch (request.uri.path) {
-      case '/api/config':
-        // Force reload config from file before sending
-        await ConfigService.reloadConfigFromFile();
-        request.response
-          ..statusCode = HttpStatus.ok
-          ..headers.set('Content-Type', 'application/json')
-          ..headers.set('Access-Control-Allow-Origin', '*')
-          ..write(jsonEncode(ConfigService.configData))
-          ..close();
-        break;
+      switch (request.uri.path) {
+        case '/api/config':
+          // Force reload config from file before sending
+          await ConfigService.reloadConfigFromFile();
+          request.response
+            ..statusCode = HttpStatus.ok
+            ..headers.set('Content-Type', 'application/json')
+            ..headers.set('Access-Control-Allow-Origin', '*')
+            ..write(jsonEncode(ConfigService.configData))
+            ..close();
+          break;
 
-      case '/api/status':
-        request.response
-          ..statusCode = HttpStatus.ok
-          ..headers.set('Content-Type', 'application/json')
-          ..write(jsonEncode({'status': 'running', 'port': port}))
-          ..close();
-        break;
+        case '/api/status':
+          request.response
+            ..statusCode = HttpStatus.ok
+            ..headers.set('Content-Type', 'application/json')
+            ..write(jsonEncode({'status': 'running', 'port': port}))
+            ..close();
+          break;
 
-      default:
-        request.response
-          ..statusCode = HttpStatus.notFound
-          ..write('Not Found')
-          ..close();
+        default:
+          request.response
+            ..statusCode = HttpStatus.notFound
+            ..write('Not Found')
+            ..close();
+      }
+    } catch (e, stackTrace) {
+      print('NetworkService: Error handling request: $e');
+      print('NetworkService: Stack trace: $stackTrace');
     }
   }
 
@@ -102,10 +123,12 @@ class NetworkService {
           }
         }
       }
-    } catch (e) {
-      print('Error during server discovery: $e');
+    } catch (e, stackTrace) {
+      print('NetworkService: Error during server discovery: $e');
+      print('NetworkService: Stack trace: $stackTrace');
     }
 
+    print('NetworkService: No servers found on network');
     return null;
   }
 
