@@ -51,23 +51,22 @@ class ConfigService {
 
   static Future<void> _syncConfigFromServer() async {
     try {
-      // First try localhost for emulator
-      String host = '10.0.2.2';
+      final serverHost = await NetworkService.findServer();
+      if (serverHost == null) {
+        print('No server found on network');
+        return;
+      }
 
-      // If that fails, try local network
-      var response = await http
-          .get(Uri.parse('http://$host:9876/api/config'))
-          .timeout(const Duration(seconds: 2))
-          .catchError((_) async {
-        host = await NetworkService.findServer() ?? '0.0.0.0';
-        return await http.get(Uri.parse('http://$host:9876/api/config'));
-      });
+      final response = await http
+          .get(Uri.parse(
+              'http://$serverHost:${NetworkService.defaultPort}/api/config'))
+          .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final syncedConfig = jsonDecode(response.body);
         configData.addAll(syncedConfig);
         configNotifier.value = configData;
-        print('Config synced from server: $configData');
+        print('Config synced from server at $serverHost');
       }
     } catch (e) {
       print('Error syncing config: $e');
