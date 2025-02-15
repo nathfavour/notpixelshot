@@ -223,21 +223,12 @@ class IndexService {
   static Future<List<Map<String, dynamic>>> getIndexedFiles() async {
     try {
       print('IndexService: Getting all indexed files...');
-      // First try to get files from database
-      final List<Map<String, dynamic>> dbFiles =
-          await database.query('screenshots');
-      print('IndexService: Found ${dbFiles.length} files in database');
+      final List<Map<String, dynamic>> allFiles = [];
 
-      if (dbFiles.isEmpty) {
-        // If no files in database, get from directory
-        print('IndexService: No files in database, scanning directory...');
-        final directory = Directory(screenshotDirectory);
-        if (!await directory.exists()) {
-          print('IndexService: Screenshot directory does not exist');
-          return [];
-        }
-
-        final files = await directory
+      // Get files from directory first
+      final directory = Directory(screenshotDirectory);
+      if (await directory.exists()) {
+        final directoryFiles = await directory
             .list()
             .where((f) =>
                 f.path.toLowerCase().endsWith('.png') ||
@@ -249,14 +240,26 @@ class IndexService {
                 })
             .toList();
 
-        print('IndexService: Found ${files.length} files in directory');
-        totalScreenshotsNotifier.value = files.length;
-        return files;
+        allFiles.addAll(directoryFiles);
+        print(
+            'IndexService: Found ${directoryFiles.length} files in directory');
       }
 
-      print('IndexService: Returning ${dbFiles.length} indexed files');
-      totalScreenshotsNotifier.value = dbFiles.length;
-      return dbFiles;
+      // Then get any additional indexed files from database
+      final List<Map<String, dynamic>> dbFiles =
+          await database.query('screenshots');
+      print('IndexService: Found ${dbFiles.length} files in database');
+
+      // Add database files that aren't already in the list
+      for (var dbFile in dbFiles) {
+        if (!allFiles.any((f) => f['path'] == dbFile['path'])) {
+          allFiles.add(dbFile);
+        }
+      }
+
+      print('IndexService: Returning ${allFiles.length} total files');
+      totalScreenshotsNotifier.value = allFiles.length;
+      return allFiles;
     } catch (e, stackTrace) {
       print('IndexService: Error getting indexed files: $e');
       print('IndexService: Stack trace: $stackTrace');

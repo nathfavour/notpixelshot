@@ -34,9 +34,13 @@ class _SearchScreenState extends State<SearchScreen> {
     print('SearchScreen: Search query received: "$query"');
     setState(() {
       _searchQuery = query;
-      _searchResultsFuture = query.trim().isEmpty
-          ? IndexService.getIndexedFiles()
-          : IndexService.searchScreenshots(query);
+      if (query.trim().isEmpty) {
+        print('SearchScreen: Empty query, loading ALL screenshots');
+        _loadAllScreenshots(); // Explicitly load all screenshots for empty query
+      } else {
+        print('SearchScreen: Searching for: "$query"');
+        _searchResultsFuture = IndexService.searchScreenshots(query);
+      }
     });
   }
 
