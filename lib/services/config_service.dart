@@ -9,6 +9,7 @@ import 'package:notpixelshot/widgets/permission_dialog.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 class ConfigService {
   static late Map<String, dynamic> configData;
@@ -31,7 +32,11 @@ class ConfigService {
 
       if (Platform.isAndroid || Platform.isIOS) {
         print('ConfigService: Running on mobile, syncing from server...');
-        await _syncConfigFromServer();
+        final success = await _syncConfigFromServer();
+        if (!success) {
+          print('ConfigService: Server sync failed, using local mobile config');
+          await _loadMobileConfig();
+        }
       } else {
         print('ConfigService: Running on desktop, loading from file...');
         await _loadConfigFromFile();
@@ -39,12 +44,10 @@ class ConfigService {
       }
 
       configNotifier.value = configData;
-      print('ConfigService: Initialization complete');
+      print('ConfigService: Final config: $configData');
     } catch (e, stackTrace) {
       print('ConfigService: Error during initialization: $e');
       print('ConfigService: Stack trace: $stackTrace');
-      configNotifier.value =
-          configData; // Ensure notifier is updated even on error
     }
   }
 
@@ -172,6 +175,14 @@ class ConfigService {
   }
 
   static Map<String, dynamic> _getDefaultConfig() {
+    if (Platform.isAndroid || Platform.isIOS) {
+      return {
+        'defaultScreenshotDirectory': _getMobileScreenshotPaths(),
+        'ollamaModelName': 'tinyllama',
+        'ollamaPrompt': 'Explain this image in detail.',
+        'serverTimeout': 5000,
+      };
+    }
     final home = Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
         '';
@@ -189,5 +200,79 @@ class ConfigService {
       'configFilePath': '$home/.notpixelshot.json',
       'serverTimeout': 5000,
     };
+  }
+
+  static Future<void> _loadMobileConfig() async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final configFile = File('${directory.path}/notpixelshot_config.json');
+
+      if (await configFile.exists()) {
+        final content = await configFile.readAsString();
+        final loadedConfig = jsonDecode(content);
+        configData.addAll(loadedConfig);
+        print('ConfigService: Loaded mobile config: $configData');
+      } else {
+        // Ensure mobile paths are correct
+        configData['defaultScreenshotDirectory'] = _getMobileScreenshotPaths();
+        await configFile.writeAsString(jsonEncode(configData));
+        print('ConfigService: Created new mobile config');
+      }
+    } catch (e) {
+      print('ConfigService: Error loading mobile config: $e');
+    }
+  }
+
+  static Map<String, String> _getMobileScreenshotPaths() {
+    if (Platform.isAndroid) {
+      return {
+        'android': '/storage/emulated/0/Pictures/Screenshots',
+        'dcim': '/storage/emulated/0/DCIM/Screenshots',
+        'custom': '/storage/emulated/0/Pictures/Screenshots'
+      };
+    } else if (Platform.isIOS) {
+      return {'ios': 'Photos/Screenshots'};
+    }
+    return {};
+  }
+
+  static Future<bool> _syncConfigFromServer() async {
+    try {
+      print('ConfigService: Attempting to sync from server...');
+      final serverHost = await NetworkService.findServer();
+      if (serverHost == null) {
+        print('ConfigService: No server found');
+        return false;
+      }
+
+      final response = await http
+          .get(Uri.parse(
+              'http://$serverHost:${NetworkService.defaultPort}/api/config'))
+          .timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final syncedConfig = jsonDecode(response.body);
+
+        // Merge with mobile-specific paths
+        final mobileConfig = _getMobileScreenshotPaths();
+        syncedConfig['defaultScreenshotDirectory'] = {
+          ...syncedConfig['defaultScreenshotDirectory'],
+          ...mobileConfig
+        };
+
+        configData = syncedConfig;
+
+        // Save synced config locally
+        final directory = await getApplicationDocumentsDirectory();
+        final configFile = File('${directory.path}/notpixelshot_config.json');
+        await configFile.writeAsString(jsonEncode(configData));
+
+        print('ConfigService: Successfully synced and saved config');
+        return true;
+      }
+    } catch (e) {
+      print('ConfigService: Error during server sync: $e');
+    }
+    return false;
   }
 }

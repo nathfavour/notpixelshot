@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/config_service.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -18,13 +19,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ValueListenableBuilder<Map<String, dynamic>>(
         valueListenable: ConfigService.configNotifier,
         builder: (context, config, child) {
+          if (config.isEmpty) {
+            return const Center(child: Text('Loading settings...'));
+          }
+
+          final filteredConfig = Platform.isAndroid || Platform.isIOS
+              ? _filterMobileSettings(config)
+              : config;
+
           return ListView(
-            children: config.entries.map((entry) {
+            children: filteredConfig.entries.map((entry) {
               final key = entry.key;
               final value = entry.value;
 
+              if (Platform.isAndroid || Platform.isIOS) {
+                // Show only relevant settings on mobile
+                if (_isMobileRelevantSetting(key)) {
+                  return _buildMobileSettingTile(key, value);
+                }
+                return const SizedBox.shrink();
+              }
+
               return ListTile(
-                title: Text(key),
+                title: Text(_formatSettingName(key)),
                 subtitle: _buildSubtitle(value),
                 onTap: () => _editSetting(context, key, value),
               );
@@ -33,6 +50,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
         },
       ),
     );
+  }
+
+  Map<String, dynamic> _filterMobileSettings(Map<String, dynamic> config) {
+    final relevantKeys = [
+      'defaultScreenshotDirectory',
+      'serverTimeout',
+      // Add other mobile-relevant keys
+    ];
+
+    return Map.fromEntries(
+      config.entries.where((entry) => relevantKeys.contains(entry.key)),
+    );
+  }
+
+  bool _isMobileRelevantSetting(String key) {
+    return [
+      'defaultScreenshotDirectory',
+      'serverTimeout',
+      // Add other mobile-relevant keys
+    ].contains(key);
+  }
+
+  Widget _buildMobileSettingTile(String key, dynamic value) {
+    return ListTile(
+      title: Text(_formatSettingName(key)),
+      subtitle: _buildMobileSubtitle(value),
+      onTap: () => _editMobileSetting(context, key, value),
+    );
+  }
+
+  String _formatSettingName(String key) {
+    return key
+        .replaceAll(RegExp(r'([A-Z])'), ' $1')
+        .split('_')
+        .map((word) => word[0].toUpperCase() + word.substring(1))
+        .join(' ');
   }
 
   Widget _buildSubtitle(dynamic value) {
