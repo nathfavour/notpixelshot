@@ -7,9 +7,11 @@ class NetworkService {
     int port = 9876;
     bool serverRunning = false;
     HttpServer? server;
+    int timeout = ConfigService.configData['serverTimeout'] ??
+        5000; // Default timeout 5 seconds
 
     // Check if a server is already running
-    if (await _isServerRunning(port)) {
+    if (await _isServerRunning('0.0.0.0', port, timeout)) {
       print('Server already running on port $port. Skipping server start.');
       return;
     }
@@ -47,15 +49,16 @@ class NetworkService {
     }
   }
 
-  static Future<bool> _isServerRunning(int port) async {
+  static Future<bool> _isServerRunning(
+      String host, int port, int timeout) async {
     try {
-      final socket = await Socket.connect('localhost', port)
-          .timeout(const Duration(milliseconds: 500));
+      final socket = await Socket.connect(host, port)
+          .timeout(Duration(milliseconds: timeout));
       socket.close();
-      print('Server is running on port $port');
+      print('Server is running on $host:$port');
       return true;
     } catch (e) {
-      print('Server is not running on port $port');
+      print('Server is not running on $host:$port');
       return false;
     }
   }

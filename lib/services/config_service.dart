@@ -38,8 +38,10 @@ class ConfigService {
 
   static Future<void> _syncConfigFromServer() async {
     try {
+      // Use the correct host address for syncing the configuration
+      String host = '0.0.0.0';
       final response = await http
-          .get(Uri.parse('http://localhost:9876/config'))
+          .get(Uri.parse('http://$host:9876/config'))
           .timeout(const Duration(seconds: 5)); // Add timeout
 
       if (response.statusCode == 200) {
@@ -97,7 +99,8 @@ class ConfigService {
       'ollamaModelName': 'tinyllama',
       'ollamaPrompt': 'Explain this image in detail.',
       'serverPort': 9876,
-      'configFilePath': '$home/.notpixelshot.json'
-    };
-  }
+      'configFilePath': '$home/.notpixelshot.json',
+    };'serverTimeout': 5000, // Default timeout in milliseconds
+  } };
+} }
 }
