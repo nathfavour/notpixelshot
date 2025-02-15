@@ -8,16 +8,19 @@ import 'package:notpixelshot/services/network_service.dart';
 import 'package:notpixelshot/widgets/permission_dialog.dart';
 import 'package:permission_handler/permission_handler.dart'; // for requesting file permissions on mobile
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 
 class ConfigService {
   static late Map<String, dynamic> configData;
   static final ValueNotifier<Map<String, dynamic>> configNotifier =
       ValueNotifier({}); // live sync notifier
   static StreamSubscription? _configFileWatcher;
-  static String get _configFilePath =>
-      Platform.environment['HOME'] ??
-      Platform.environment['USERPROFILE'] ??
-      '' + '/.notpixelshot.json';
+  static String get _configFilePath {
+    final home = Platform.environment['HOME'] ??
+        Platform.environment['USERPROFILE'] ??
+        '.';
+    return path.join(home, '.notpixelshot.json');
+  }
 
   static Future<void> initialize() async {
     if (Platform.isAndroid || Platform.isIOS) {
@@ -122,18 +125,21 @@ class ConfigService {
     configData.addAll(newConfig);
     configNotifier.value = configData; // live update notifier on change
     if (!Platform.isAndroid && !Platform.isIOS) {
-      final home = Platform.environment['HOME'] ??
-          Platform.environment['USERPROFILE'] ??
-          '';
-      final filePath = '$home/.notpixelshot.json';
-      _saveConfig(File(filePath), configData);
+      final configFile = File(_configFilePath);
+      _saveConfig(configFile, configData);
     }
   }
 
   static Future<void> _saveConfig(
       File file, Map<String, dynamic> config) async {
     try {
-      await file.writeAsString(jsonEncode(config));
+      // Ensure parent directory exists
+      final parent = file.parent;
+      if (!await parent.exists()) {
+        await parent.create(recursive: true);
+      }
+
+      await file.writeAsString(jsonEncode(config), flush: true);
       print('Config saved to ${file.path}');
     } catch (e) {
       print('Failed to save config: $e');
