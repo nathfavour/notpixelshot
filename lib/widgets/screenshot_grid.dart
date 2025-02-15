@@ -98,6 +98,11 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
     return ValueListenableBuilder<int>(
       valueListenable: IndexService.totalScreenshotsNotifier,
       builder: (context, totalScreenshots, child) {
+        if (_files.isEmpty) {
+          return const Center(
+            child: Text('No screenshots found.'),
+          );
+        }
         return GridView.builder(
           itemCount: _files.length,
           physics: const AlwaysScrollableScrollPhysics(),

@@ -21,6 +21,9 @@ class _SearchScreenState extends State<SearchScreen> {
     });
     // Trigger search in IndexService
     // Update UI when results are available
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   @override
