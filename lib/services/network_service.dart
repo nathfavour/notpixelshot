@@ -8,6 +8,12 @@ class NetworkService {
     bool serverRunning = false;
     HttpServer? server;
 
+    // Check if a server is already running
+    if (await _isServerRunning(port)) {
+      print('Server already running on port $port. Skipping server start.');
+      return;
+    }
+
     while (!serverRunning && port <= 9900) {
       try {
         server = await HttpServer.bind(InternetAddress.anyIPv4, port);
@@ -38,6 +44,17 @@ class NetworkService {
 
     if (!serverRunning) {
       print('Failed to start server on any port between 9876 and 9900.');
+    }
+  }
+
+  static Future<bool> _isServerRunning(int port) async {
+    try {
+      final socket = await Socket.connect('localhost', port)
+          .timeout(const Duration(milliseconds: 500));
+      socket.close();
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 }

@@ -11,11 +11,13 @@ class ConfigService {
       ValueNotifier({}); // live sync notifier
 
   static Future<void> initialize() async {
-    // Request storage permission only on Android and iOS
-    if (Platform.isAndroid || Platform.isIOS) {
+    // Request storage permission only on Android
+    if (Platform.isAndroid) {
       try {
         final status = await Permission.storage.request();
-        if (!status.isGranted) {
+        if (status.isGranted) {
+          print('Storage permission granted on mobile.');
+        } else {
           print('Storage permission not granted on mobile.');
           // Optionally show a dialog to the user explaining why the permission is needed
         }
@@ -23,43 +25,26 @@ class ConfigService {
         // Handle the exception, e.g., log it or show an error message
         debugPrint('Error requesting storage permission: $e');
       }
-
-      // Sync config from server
-      await _syncConfigFromServer();
-    } else {
-      final home = Platform.environment['HOME'] ??
-          Platform.environment['USERPROFILE'] ??
-          '';
-      final filePath = '$home/.notpixelshot.json';
-      final file = File(filePath);
-
-      if (await file.exists()) {
-        try {
-          final content = await file.readAsString();
-          configData = jsonDecode(content);
-          print('Config loaded from $filePath');
-        } catch (e) {
-          print('Failed to load config: $e');
-          configData = _getDefaultConfig();
-          await _saveConfig(file, configData);
-        }
-      } else {
-        configData = _getDefaultConfig();
-        await _saveConfig(file, configData);
-        print('Default config created at $filePath');
-      }
     }
+
+    // Sync config from server
+    await _syncConfigFromServer();
+
     configNotifier.value = configData; // update live notifier
   }
 
   static Future<void> _syncConfigFromServer() async {
     try {
-      final response = await http.get(Uri.parse('http://localhost:9876/config'));
+      final response = await http
+          .get(Uri.parse('http://localhost:9876/config'))
+          .timeout(const Duration(seconds: 5)); // Add timeout
+
       if (response.statusCode == 200) {
         configData = jsonDecode(response.body);
         print('Config synced from server: $configData');
       } else {
-        print('Failed to sync config from server. Status code: ${response.statusCode}');
+        print(
+            'Failed to sync config from server. Status code: ${response.statusCode}');
         configData = _getDefaultConfig(); // Use default config if sync fails
       }
     } catch (e) {
