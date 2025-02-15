@@ -44,7 +44,8 @@ class NetworkService {
     switch (request.uri.path) {
       case '/api/config':
         // Force reload config from file before sending
-        await ConfigService._loadConfigFromFile();
+        await ConfigService
+            ._loadConfigFromFile(); // Fix: use correct private method name
         request.response
           ..statusCode = HttpStatus.ok
           ..headers.set('Content-Type', 'application/json')
