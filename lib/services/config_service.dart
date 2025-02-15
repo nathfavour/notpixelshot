@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart'; // for ValueNotifier
 import 'package:flutter/material.dart'; // for debugPrint
+import '../main.dart'; // Import for navigatorKey
 import 'package:notpixelshot/services/network_service.dart';
 import 'package:notpixelshot/widgets/permission_dialog.dart';
 import 'package:permission_handler/permission_handler.dart'; // for requesting file permissions on mobile
@@ -29,21 +30,17 @@ class ConfigService {
 
   static Future<void> _requestPermissions() async {
     try {
-      final context = navigatorKey.currentContext;
-      if (context == null) {
+      if (navigatorKey.currentContext == null) {
         print('No context available for permission dialog');
         return;
       }
 
       final status = await Permission.storage.status;
       if (!status.isGranted) {
-        final result = await showPermissionDialog(context);
+        final result = await showPermissionDialog(navigatorKey.currentContext!);
         if (result == true) {
-          // Request both permissions
-          await [
-            Permission.storage,
-            Permission.manageExternalStorage,
-          ].request();
+          await Permission.manageExternalStorage.request();
+          await Permission.storage.request();
           print('Storage permissions requested successfully');
         }
       }
