@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+
 import 'config_service.dart';
 
 class NetworkService {
@@ -55,10 +57,14 @@ class NetworkService {
       final socket = await Socket.connect(host, port)
           .timeout(Duration(milliseconds: timeout));
       socket.close();
-      print('Server is running on $host:$port');
+      if (kDebugMode) {
+        print('Server is running on $host:$port');
+      }
       return true;
     } catch (e) {
-      print('Server is not running on $host:$port');
+      if (kDebugMode) {
+        print('Server is not running on $host:$port');
+      }
       return false;
     }
   }
