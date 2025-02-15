@@ -32,11 +32,7 @@ class ConfigService {
 
       if (Platform.isAndroid || Platform.isIOS) {
         print('ConfigService: Running on mobile, syncing from server...');
-        final success = await _syncConfigFromServer();
-        if (!success) {
-          print('ConfigService: Server sync failed, using local mobile config');
-          await _loadMobileConfig();
-        }
+        await _attemptConfigSync();
       } else {
         print('ConfigService: Running on desktop, loading from file...');
         await _loadConfigFromFile();
@@ -119,34 +115,46 @@ class ConfigService {
     }
   }
 
-  static Future<void> _syncConfigFromServer() async {
+  static Future<void> _attemptConfigSync() async {
     try {
-      print('ConfigService: Syncing config from server...');
+      print('ConfigService: Attempting to sync from server...');
       final serverHost = await NetworkService.findServer();
       if (serverHost == null) {
-        print('ConfigService: No server found on network');
+        print('ConfigService: No server found');
+        await _loadMobileConfig();
         return;
       }
 
-      print('ConfigService: Found server at $serverHost');
       final response = await http
           .get(Uri.parse(
               'http://$serverHost:${NetworkService.defaultPort}/api/config'))
           .timeout(const Duration(seconds: 5));
 
-      print('ConfigService: Response status code: ${response.statusCode}');
       if (response.statusCode == 200) {
         final syncedConfig = jsonDecode(response.body);
+
+        // Merge with mobile-specific paths
+        final mobileConfig = _getMobileScreenshotPaths();
+        syncedConfig['defaultScreenshotDirectory'] = {
+          ...syncedConfig['defaultScreenshotDirectory'],
+          ...mobileConfig
+        };
+
         configData = syncedConfig;
-        configNotifier.value = syncedConfig;
-        print('ConfigService: Config synced from server at $serverHost');
-        print('ConfigService: Synced config data: $syncedConfig');
+
+        // Save synced config locally
+        final directory = await getApplicationDocumentsDirectory();
+        final configFile = File('${directory.path}/notpixelshot_config.json');
+        await configFile.writeAsString(jsonEncode(configData));
+
+        print('ConfigService: Successfully synced and saved config');
       } else {
-        print('ConfigService: Failed to sync config: ${response.statusCode}');
+        print('ConfigService: Sync failed, loading local mobile config');
+        await _loadMobileConfig();
       }
-    } catch (e, stackTrace) {
-      print('ConfigService: Error syncing config: $e');
-      print('ConfigService: Stack trace: $stackTrace');
+    } catch (e) {
+      print('ConfigService: Error during server sync: $e');
+      await _loadMobileConfig();
     }
   }
 
@@ -234,45 +242,5 @@ class ConfigService {
       return {'ios': 'Photos/Screenshots'};
     }
     return {};
-  }
-
-  static Future<bool> _syncConfigFromServer() async {
-    try {
-      print('ConfigService: Attempting to sync from server...');
-      final serverHost = await NetworkService.findServer();
-      if (serverHost == null) {
-        print('ConfigService: No server found');
-        return false;
-      }
-
-      final response = await http
-          .get(Uri.parse(
-              'http://$serverHost:${NetworkService.defaultPort}/api/config'))
-          .timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final syncedConfig = jsonDecode(response.body);
-
-        // Merge with mobile-specific paths
-        final mobileConfig = _getMobileScreenshotPaths();
-        syncedConfig['defaultScreenshotDirectory'] = {
-          ...syncedConfig['defaultScreenshotDirectory'],
-          ...mobileConfig
-        };
-
-        configData = syncedConfig;
-
-        // Save synced config locally
-        final directory = await getApplicationDocumentsDirectory();
-        final configFile = File('${directory.path}/notpixelshot_config.json');
-        await configFile.writeAsString(jsonEncode(configData));
-
-        print('ConfigService: Successfully synced and saved config');
-        return true;
-      }
-    } catch (e) {
-      print('ConfigService: Error during server sync: $e');
-    }
-    return false;
   }
 }

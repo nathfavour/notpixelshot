@@ -81,11 +81,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _formatSettingName(String key) {
-    return key
-        .replaceAll(RegExp(r'([A-Z])'), ' $1')
-        .split('_')
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' ');
+    // Fix the regex pattern and string formatting
+    final words = key.split(RegExp(r'(?=[A-Z])')).map((word) {
+      if (word.isEmpty) return '';
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).where((word) => word.isNotEmpty);
+
+    return words.join(' ');
   }
 
   Widget _buildSubtitle(dynamic value) {
