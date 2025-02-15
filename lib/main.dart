@@ -7,6 +7,8 @@ import 'services/index_service.dart';
 import 'screens/search_screen.dart';
 import 'screens/settings_screen.dart';
 
+export 'main.dart' show navigatorKey; // Export navigatorKey
+
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {

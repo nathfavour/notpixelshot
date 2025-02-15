@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../main.dart'; // Import navigatorKey
 
 Future<bool?> showPermissionDialog() {
   return showDialog<bool>(
