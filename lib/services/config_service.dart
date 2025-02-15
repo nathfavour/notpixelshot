@@ -148,10 +148,8 @@ class ConfigService {
   static void updateConfig(Map<String, dynamic> newConfig) {
     configData.addAll(newConfig);
     configNotifier.value = configData; // live update notifier on change
-    if (!Platform.isAndroid && !Platform.isIOS) {
-      final configFile = File(_configFilePath);
-      _saveConfig(configFile, configData);
-    }
+    final configFile = File(_configFilePath);
+    _saveConfig(configFile, configData);
   }
 
   static Future<void> _saveConfig(
