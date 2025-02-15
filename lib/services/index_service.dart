@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as path;
+import 'package:fuzzy/fuzzy.dart';
 import '../services/config_service.dart';
 
 class IndexService {
@@ -253,39 +254,80 @@ class IndexService {
   static Future<List<Map<String, dynamic>>> searchScreenshots(
       String query) async {
     try {
-      print('IndexService: Searching screenshots for query: $query');
+      if (query.trim().isEmpty) {
+        return await getIndexedFiles();
+      }
 
-      // Basic LIKE search
-      final List<Map<String, dynamic>> results = await database.query(
-        'screenshots',
-        where:
-            'extracted_text LIKE ? OR ollama_description LIKE ? OR path LIKE ?',
-        whereArgs: ['%$query%', '%$query%', '%$query%'],
+      // Get all indexed screenshots
+      final List<Map<String, dynamic>> allScreenshots =
+          await database.query('screenshots');
+
+      // Create search options
+      final options = FuzzyOptions(
+        isCaseSensitive: false,
+        threshold: 0.4,
+        minMatchCharLength: 2,
       );
 
-      // TODO: Implement ranking logic here based on number of matches, closeness, etc.
-      // This is a placeholder, replace with actual ranking implementation.
-      results.sort((a, b) {
-        // Example: prioritize results where the query appears earlier in the text
-        final aText = (a['extracted_text'] as String).toLowerCase();
-        final bText = (b['extracted_text'] as String).toLowerCase();
-        final aIndex = aText.indexOf(query.toLowerCase());
-        final bIndex = bText.indexOf(query.toLowerCase());
+      // Calculate scores for each screenshot
+      final rankedResults = allScreenshots
+          .map((screenshot) {
+            final extractedText = screenshot['extracted_text'] as String? ?? '';
+            final ollamaDescription =
+                screenshot['ollama_description'] as String? ?? '';
+            final path = screenshot['path'] as String;
 
-        if (aIndex == -1 && bIndex == -1) return 0;
-        if (aIndex == -1) return 1;
-        if (bIndex == -1) return -1;
+            // Calculate match scores
+            final textScore = _calculateScore(extractedText, query, options);
+            final descriptionScore =
+                _calculateScore(ollamaDescription, query, options);
+            final pathScore =
+                _calculateScore(path.split('/').last, query, options);
 
-        return aIndex.compareTo(bIndex);
-      });
+            // Weighted scoring (prioritize text content)
+            final totalScore =
+                textScore * 0.6 + descriptionScore * 0.3 + pathScore * 0.1;
 
-      print('IndexService: Found ${results.length} results');
-      return results;
+            return {
+              ...screenshot,
+              'score': totalScore,
+            };
+          })
+          .where((item) => (item['score'] as double) > 0)
+          .toList();
+
+      // Sort by score
+      rankedResults.sort(
+          (a, b) => (b['score'] as double).compareTo(a['score'] as double));
+
+      // Remove score from final results
+      return rankedResults
+          .map((item) => Map<String, dynamic>.from(item)..remove('score'))
+          .toList();
     } catch (e, stackTrace) {
       print('IndexService: Error searching screenshots: $e');
       print('IndexService: Stack trace: $stackTrace');
       return [];
     }
+  }
+
+  static double _calculateScore(
+      String text, String query, FuzzyOptions options) {
+    if (text.isEmpty) return 0.0;
+
+    final fuzzy = Fuzzy([text], options: options);
+    final results = fuzzy.search(query);
+
+    if (results.isEmpty) return 0.0;
+
+    // Calculate various scoring factors
+    final directMatchScore =
+        text.toLowerCase().contains(query.toLowerCase()) ? 0.3 : 0.0;
+    final fuzzyScore = results.first.score;
+    final positionScore =
+        text.toLowerCase().indexOf(query.toLowerCase()) == 0 ? 0.2 : 0.0;
+
+    return directMatchScore + fuzzyScore + positionScore;
   }
 
   static void monitorDirectory(

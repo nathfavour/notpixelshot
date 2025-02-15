@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../widgets/search_bar.dart';
 import '../widgets/screenshot_grid.dart';
 import '../widgets/processing_status.dart';
@@ -14,6 +15,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   String _searchQuery = '';
   Future<List<Map<String, dynamic>>>? _searchResultsFuture;
+  Timer? _debounceTimer;
 
   @override
   void initState() {
@@ -28,15 +30,26 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _onSearch(String query) {
-    setState(() {
-      _searchQuery = query;
-      if (query.trim().isEmpty) {
-        // Load all screenshots when search is empty
-        _searchResultsFuture = IndexService.getIndexedFiles();
-      } else {
-        _searchResultsFuture = IndexService.searchScreenshots(query);
-      }
+    // Cancel previous timer if it exists
+    _debounceTimer?.cancel();
+
+    // Set a debounce timer to avoid too frequent searches
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      setState(() {
+        _searchQuery = query;
+        if (query.trim().isEmpty) {
+          _searchResultsFuture = IndexService.getIndexedFiles();
+        } else {
+          _searchResultsFuture = IndexService.searchScreenshots(query);
+        }
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   @override
