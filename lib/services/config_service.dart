@@ -100,7 +100,7 @@ class ConfigService {
       'ollamaPrompt': 'Explain this image in detail.',
       'serverPort': 9876,
       'configFilePath': '$home/.notpixelshot.json',
-    };'serverTimeout': 5000, // Default timeout in milliseconds
-  } };
-} }
+      'serverTimeout': 5000,
+    };
+  }
 }
