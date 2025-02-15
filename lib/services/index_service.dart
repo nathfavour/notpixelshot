@@ -154,9 +154,13 @@ class IndexService {
         final result = await Process.run('tesseract', [file.path, 'stdout']);
         final extractedText = result.stdout.toString();
 
-        // Call Ollama
-        final ollamaPrompt = ConfigService.configData['ollamaPrompt'];
-        final ollamaModel = ConfigService.configData['ollamaModelName'];
+        // Call Ollama with proper config path and null safety
+        final ollamaConfig =
+            ConfigService.configData['ollama'] as Map<String, dynamic>? ?? {};
+        final ollamaPrompt =
+            ollamaConfig['prompt'] as String? ?? 'Describe this screenshot:';
+        final ollamaModel = ollamaConfig['model'] as String? ?? 'llama2';
+
         final ollamaResult = await Process.run('ollama', [
           'run',
           ollamaModel,
@@ -362,9 +366,13 @@ class IndexService {
       final result = await Process.run('tesseract', [filePath, 'stdout']);
       final extractedText = result.stdout.toString();
 
-      // Call Ollama
-      final ollamaPrompt = ConfigService.configData['ollamaPrompt'];
-      final ollamaModel = ConfigService.configData['ollamaModelName'];
+      // Call Ollama with proper config path and null safety
+      final ollamaConfig =
+          ConfigService.configData['ollama'] as Map<String, dynamic>? ?? {};
+      final ollamaPrompt =
+          ollamaConfig['prompt'] as String? ?? 'Describe this screenshot:';
+      final ollamaModel = ollamaConfig['model'] as String? ?? 'llama2';
+
       final ollamaResult = await Process.run('ollama', [
         'run',
         ollamaModel,
