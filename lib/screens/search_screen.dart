@@ -37,6 +37,7 @@ class _SearchScreenState extends State<SearchScreen> {
             icon: const Icon(Icons.settings),
             onPressed: () => Navigator.pushNamed(context, '/settings'),
           ),
+          // Removed play arrow button
         ],
       ),
       body: Column(

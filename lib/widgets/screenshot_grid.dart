@@ -34,24 +34,23 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
     try {
       final directoryPath = _getScreenshotDirectory();
       final directory = Directory(directoryPath);
-
+      print('ScreenshotGrid: Loading files from directory: $directoryPath');
       if (!await directory.exists()) {
-        print('Screenshot directory does not exist: $directoryPath');
+        print('ScreenshotGrid: Directory does not exist: $directoryPath');
         return;
       }
-
       final files = await directory
           .list()
           .where((f) =>
               f.path.toLowerCase().endsWith('.png') ||
               f.path.toLowerCase().endsWith('.jpg'))
           .toList();
-
+      print('ScreenshotGrid: Found ${files.length} files.');
       setState(() {
         _files = files;
       });
     } catch (e) {
-      print('Error loading files: $e');
+      print('ScreenshotGrid: Error loading files: $e');
     }
   }
 
@@ -99,8 +98,10 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
       valueListenable: IndexService.totalScreenshotsNotifier,
       builder: (context, totalScreenshots, child) {
         if (_files.isEmpty) {
-          return const Center(
-            child: Text('No screenshots found.'),
+          final dirPath = _getScreenshotDirectory();
+          return Center(
+            child: Text('No screenshots found in:\n$dirPath',
+                textAlign: TextAlign.center),
           );
         }
         return GridView.builder(

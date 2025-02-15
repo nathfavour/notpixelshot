@@ -12,38 +12,32 @@ export 'main.dart' show navigatorKey;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
-  try {
-    WidgetsFlutterBinding.ensureInitialized();
-    print('WidgetsFlutterBinding initialized');
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const MyApp()); // Show UI first
 
-    // Initialize FFI for sqflite on desktop platforms
+  // Start services in the background
+  unawaited(_initializeServices());
+}
+
+Future<void> _initializeServices() async {
+  try {
+    print('Initializing services in background...');
     if (Platform.isLinux || Platform.isMacOS || Platform.isWindows) {
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
-      print('sqflite FFI initialized');
     }
+    await Future.wait([
+      ConfigService.initialize(),
+      if (!Platform.isAndroid && !Platform.isIOS) NetworkService.initialize(),
+      IndexService.initialize(),
+    ]);
+    print('All services initialized in background');
 
-    print('Initializing ConfigService...');
-    await ConfigService.initialize();
-    print('ConfigService initialized');
-
-    if (!Platform.isAndroid && !Platform.isIOS) {
-      print('Initializing NetworkService...');
-      await NetworkService.initialize();
-      print('NetworkService initialized');
-    }
-
-    print('Initializing IndexService...');
-    await IndexService.initialize();
-    print('IndexService initialized');
-
-    print('Running MyApp...');
-    runApp(const MyApp());
-    print('MyApp is running');
+    // Start processing automatically without blocking the UI
+    await IndexService.startProcessing();
   } catch (e, stackTrace) {
-    print('Error during initialization: $e');
+    print('Error during service initialization: $e');
     print('Stack trace: $stackTrace');
-    rethrow;
   }
 }
 

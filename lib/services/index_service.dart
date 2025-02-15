@@ -89,9 +89,6 @@ class IndexService {
       // Initialize total screenshots count
       await _updateTotalScreenshotsCount();
 
-      // Start processing screenshots immediately
-      await _startProcessing();
-
       print('IndexService: Initialization complete');
     } catch (e, stackTrace) {
       print('IndexService: Error during initialization: $e');
@@ -193,6 +190,11 @@ class IndexService {
       print('IndexService: Error during screenshot processing: $e');
       print('IndexService: Stack trace: $stackTrace');
     }
+  }
+
+  static Future<void> startProcessing() async {
+    await _updateTotalScreenshotsCount();
+    await _startProcessing();
   }
 
   static Future<bool> _isAlreadyIndexed(String filePath) async {
