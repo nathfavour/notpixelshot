@@ -25,19 +25,32 @@ class IndexService {
       ConfigService.configData['defaultScreenshotDirectory']
           [Platform.operatingSystem];
 
-  static String get _databasePath {
+  static String get _notpixelshotDir {
     final home = Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
         '.';
-    final dbDir = path.join(home, '.notpixelshot');
-    return path.join(dbDir, 'screenshots.db');
+    return path.join(home, '.notpixelshot');
+  }
+
+  static String get _databasePath {
+    return path.join(_notpixelshotDir, 'db', 'screenshots.db');
+  }
+
+  static String get _indexPath {
+    return path.join(_notpixelshotDir, 'index');
   }
 
   static Future<void> initialize() async {
-    // Ensure database directory exists
-    final dbFile = File(_databasePath);
-    if (!await dbFile.parent.exists()) {
-      await dbFile.parent.create(recursive: true);
+    // Create required directories
+    for (var dir in [
+      _notpixelshotDir,
+      path.dirname(_databasePath),
+      _indexPath
+    ]) {
+      final directory = Directory(dir);
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
     }
 
     // Initialize SQLite database
