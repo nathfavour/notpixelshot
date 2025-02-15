@@ -9,6 +9,7 @@ class IndexService {
   static final ValueNotifier<IndexProgress> progressNotifier = ValueNotifier(
     IndexProgress(total: 0, processed: 0, current: ''),
   );
+
   static final ValueNotifier<int> totalScreenshotsNotifier = ValueNotifier(0);
 
   static String get screenshotDirectoryWindows =>

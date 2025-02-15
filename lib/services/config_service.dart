@@ -27,6 +27,9 @@ class ConfigService {
       }
     }
 
+    // Initialize config data
+    configData = _getDefaultConfig();
+
     // Sync config from server
     await _syncConfigFromServer();
 
@@ -40,16 +43,20 @@ class ConfigService {
           .timeout(const Duration(seconds: 5)); // Add timeout
 
       if (response.statusCode == 200) {
-        configData = jsonDecode(response.body);
+        final syncedConfig = jsonDecode(response.body);
+        configData = syncedConfig;
+        configNotifier.value = configData; // Update notifier with synced config
         print('Config synced from server: $configData');
       } else {
         print(
             'Failed to sync config from server. Status code: ${response.statusCode}');
-        configData = _getDefaultConfig(); // Use default config if sync fails
+        // Use default config if sync fails
+        configNotifier.value = configData;
       }
     } catch (e) {
       print('Error syncing config from server: $e');
-      configData = _getDefaultConfig(); // Use default config if sync fails
+      // Use default config if sync fails
+      configNotifier.value = configData;
     }
   }
 

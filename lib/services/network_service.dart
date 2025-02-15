@@ -52,8 +52,10 @@ class NetworkService {
       final socket = await Socket.connect('localhost', port)
           .timeout(const Duration(milliseconds: 500));
       socket.close();
+      print('Server is running on port $port');
       return true;
     } catch (e) {
+      print('Server is not running on port $port');
       return false;
     }
   }
