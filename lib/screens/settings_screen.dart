@@ -244,4 +244,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
       },
     );
   }
+
+  Widget _buildMobileSubtitle(dynamic value) {
+    if (value is Map) {
+      if (value.containsKey(Platform.operatingSystem)) {
+        // Show only the relevant path for the current platform
+        return Text(value[Platform.operatingSystem].toString());
+      }
+      return Text(value.toString());
+    } else if (value is List) {
+      return Text(value.join(', '));
+    } else {
+      return Text(value.toString());
+    }
+  }
+
+  Future<void> _editMobileSetting(
+      BuildContext context, String key, dynamic value) async {
+    if (key == 'defaultScreenshotDirectory') {
+      await _editMobileScreenshotDirectory(context, value);
+    } else if (value is int) {
+      await _showIntDialog(context, key, value);
+    } else if (value is String) {
+      await _showStringDialog(context, key, value);
+    }
+  }
+
+  Future<void> _editMobileScreenshotDirectory(
+      BuildContext context, Map<String, dynamic> paths) async {
+    final currentPath = paths[Platform.operatingSystem];
+    final TextEditingController controller =
+        TextEditingController(text: currentPath);
+
+    String? newPath = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Screenshot Directory'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                    labelText: 'Enter screenshot directory path'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (newPath != null && newPath != currentPath) {
+      final updatedPaths = Map<String, dynamic>.from(paths);
+      updatedPaths[Platform.operatingSystem] = newPath;
+      ConfigService.updateConfig({
+        'defaultScreenshotDirectory': updatedPaths,
+      });
+    }
+  }
 }
