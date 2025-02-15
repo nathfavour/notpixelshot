@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/foundation.dart'; // for ValueNotifier
@@ -12,20 +13,49 @@ class ConfigService {
   static late Map<String, dynamic> configData;
   static final ValueNotifier<Map<String, dynamic>> configNotifier =
       ValueNotifier({}); // live sync notifier
+  static StreamSubscription? _configFileWatcher;
+  static String get _configFilePath =>
+      Platform.environment['HOME'] ??
+      Platform.environment['USERPROFILE'] ??
+      '' + '/.notpixelshot.json';
 
   static Future<void> initialize() async {
-    // Initialize config data
-    configData = _getDefaultConfig();
-
     if (Platform.isAndroid || Platform.isIOS) {
-      // Wait for app to be ready before requesting permissions
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await _requestPermissions();
-        await _syncConfigFromServer();
-      });
+      // Mobile platforms sync from server
+      await _syncConfigFromServer();
+    } else {
+      // Desktop platforms read from file and watch for changes
+      await _loadConfigFromFile();
+      _watchConfigFile();
     }
-
     configNotifier.value = configData;
+  }
+
+  static Future<void> _loadConfigFromFile() async {
+    try {
+      final file = File(_configFilePath);
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        configData = jsonDecode(content);
+        print('Loaded config from file: $configData');
+      } else {
+        configData = _getDefaultConfig();
+        await _saveConfig(file, configData);
+      }
+    } catch (e) {
+      print('Error loading config file: $e');
+      configData = _getDefaultConfig();
+    }
+  }
+
+  static void _watchConfigFile() {
+    _configFileWatcher?.cancel();
+    final file = File(_configFilePath);
+    _configFileWatcher = file.watch().listen((event) async {
+      print('Config file changed, reloading...');
+      await _loadConfigFromFile();
+      configNotifier.value = configData;
+    });
   }
 
   static Future<void> _requestPermissions() async {

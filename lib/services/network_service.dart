@@ -38,14 +38,17 @@ class NetworkService {
     }
   }
 
-  static void _handleRequest(HttpRequest request, int port) async {
+  static Future<void> _handleRequest(HttpRequest request, int port) async {
     print('Request received on port $port: ${request.uri.path}');
 
     switch (request.uri.path) {
       case '/api/config':
+        // Force reload config from file before sending
+        await ConfigService._loadConfigFromFile();
         request.response
           ..statusCode = HttpStatus.ok
           ..headers.set('Content-Type', 'application/json')
+          ..headers.set('Access-Control-Allow-Origin', '*')
           ..write(jsonEncode(ConfigService.configData))
           ..close();
         break;
@@ -69,47 +72,40 @@ class NetworkService {
   static Future<String?> findServer() async {
     final timeout = ConfigService.configData['serverTimeout'] ?? 5000;
 
-    // Get local IP address and subnet
-    final wifiIP = await _info.getWifiIP();
-    if (wifiIP == null) {
-      print('Could not determine local IP address');
-      return null;
-    }
+    try {
+      // Try common local network addresses first
+      final hosts = [
+        '192.168.1.', // Common home network
+        '192.168.0.', // Common home network
+        '10.0.2.', // Android emulator
+        '172.16.', // Other private networks
+        '172.17.',
+        '172.18.',
+        '172.19.',
+        '172.20.'
+      ];
 
-    // Extract subnet (e.g., "192.168.1" from "192.168.1.100")
-    final subnet = wifiIP.substring(0, wifiIP.lastIndexOf('.'));
-    _discoveredHosts = [];
+      for (var subnet in hosts) {
+        for (var i = 1; i < 255; i++) {
+          final host = '$subnet$i';
+          try {
+            final response = await http
+                .get(Uri.parse('http://$host:$defaultPort/api/status'))
+                .timeout(Duration(milliseconds: timeout));
 
-    // Create UDP socket for discovery
-    final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
-    socket.broadcastEnabled = true;
-
-    // Send discovery packet to all possible hosts
-    for (int i = 1; i < 255; i++) {
-      final host = '$subnet.$i';
-      try {
-        final response = await http
-            .get(Uri.parse('http://$host:$defaultPort/api/status'))
-            .timeout(Duration(milliseconds: timeout));
-
-        if (response.statusCode == 200) {
-          print('Found server at $host:$defaultPort');
-          _discoveredHosts.add(host);
+            if (response.statusCode == 200) {
+              print('Found server at $host:$defaultPort');
+              return host;
+            }
+          } catch (e) {
+            continue;
+          }
         }
-      } catch (e) {
-        // Skip failed connections
-        continue;
       }
+    } catch (e) {
+      print('Error during server discovery: $e');
     }
 
-    socket.close();
-
-    // Return the first discovered host, if any
-    if (_discoveredHosts.isNotEmpty) {
-      return _discoveredHosts.first;
-    }
-
-    print('No servers found on network');
     return null;
   }
 
