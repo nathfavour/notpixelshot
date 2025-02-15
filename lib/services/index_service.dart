@@ -33,7 +33,7 @@ class IndexService {
   }
 
   static String get _databasePath {
-    return path.join(_notpixelshotDir, 'db', 'screenshots.db');
+    return path.join(_notpixelshotDir, 'screenshots.db');
   }
 
   static String get _indexPath {
@@ -88,6 +88,9 @@ class IndexService {
 
       // Initialize total screenshots count
       await _updateTotalScreenshotsCount();
+
+      // Start processing screenshots immediately
+      await _startProcessing();
 
       print('IndexService: Initialization complete');
     } catch (e, stackTrace) {

@@ -20,8 +20,7 @@ class ConfigService {
     final home = Platform.environment['HOME'] ??
         Platform.environment['USERPROFILE'] ??
         '.';
-    final configDir = path.join(home, '.notpixelshot');
-    return path.join(configDir, 'config.json');
+    return path.join(home, '.notpixelshot.json');
   }
 
   static Future<void> initialize() async {
@@ -126,16 +125,19 @@ class ConfigService {
         return;
       }
 
+      print('ConfigService: Found server at $serverHost');
       final response = await http
           .get(Uri.parse(
               'http://$serverHost:${NetworkService.defaultPort}/api/config'))
           .timeout(const Duration(seconds: 5));
 
+      print('ConfigService: Response status code: ${response.statusCode}');
       if (response.statusCode == 200) {
         final syncedConfig = jsonDecode(response.body);
         configData = syncedConfig;
         configNotifier.value = syncedConfig;
         print('ConfigService: Config synced from server at $serverHost');
+        print('ConfigService: Synced config data: $syncedConfig');
       } else {
         print('ConfigService: Failed to sync config: ${response.statusCode}');
       }

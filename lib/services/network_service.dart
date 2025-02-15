@@ -62,11 +62,13 @@ class NetworkService {
         case '/api/config':
           // Force reload config from file before sending
           await ConfigService.reloadConfigFromFile();
+          final config = ConfigService.configData;
+          print('NetworkService: Sending config data: $config');
           request.response
             ..statusCode = HttpStatus.ok
             ..headers.set('Content-Type', 'application/json')
             ..headers.set('Access-Control-Allow-Origin', '*')
-            ..write(jsonEncode(ConfigService.configData))
+            ..write(jsonEncode(config))
             ..close();
           break;
 
