@@ -11,6 +11,15 @@ class IndexService {
   );
   static final ValueNotifier<int> totalScreenshotsNotifier = ValueNotifier(0);
 
+  static String get screenshotDirectoryWindows =>
+      ConfigService.configData['defaultScreenshotDirectory']['windows'];
+
+  static String get screenshotDirectoryMacOS =>
+      ConfigService.configData['defaultScreenshotDirectory']['macos'];
+
+  static String get screenshotDirectoryLinux =>
+      ConfigService.configData['defaultScreenshotDirectory']['linux'];
+
   static String get screenshotDirectory =>
       ConfigService.configData['defaultScreenshotDirectory']
           [Platform.operatingSystem];

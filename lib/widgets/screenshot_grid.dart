@@ -31,7 +31,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
   }
 
   Future<void> _loadFiles() async {
-    final directoryPath = IndexService.screenshotDirectory;
+    final directoryPath = _getScreenshotDirectory();
     final directory = Directory(directoryPath);
 
     if (!await directory.exists()) return;
@@ -56,7 +56,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
   }
 
   void _startMonitoring() {
-    final directoryPath = IndexService.screenshotDirectory;
+    final directoryPath = _getScreenshotDirectory();
     final directory = Directory(directoryPath);
 
     if (!directory.existsSync()) return;
@@ -68,6 +68,18 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
         await _loadIndexedFiles();
       }
     });
+  }
+
+  String _getScreenshotDirectory() {
+    if (Platform.isWindows) {
+      return IndexService.screenshotDirectoryWindows;
+    } else if (Platform.isMacOS) {
+      return IndexService.screenshotDirectoryMacOS;
+    } else if (Platform.isLinux) {
+      return IndexService.screenshotDirectoryLinux;
+    } else {
+      return IndexService.screenshotDirectory;
+    }
   }
 
   @override
