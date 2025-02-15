@@ -149,10 +149,13 @@ class IndexService {
         current: '',
       );
 
+      int processedCount = 0;
       for (var file in files) {
         if (await _isAlreadyIndexed(file.path)) {
+          print('IndexService: Already indexed: ${file.path}');
+          processedCount++;
           progressNotifier.value = progressNotifier.value.copyWith(
-            processed: progressNotifier.value.processed + 1,
+            processed: processedCount,
             current: file.path,
           );
           continue;
@@ -185,8 +188,9 @@ class IndexService {
           'created_at': DateTime.now().millisecondsSinceEpoch,
         });
 
+        processedCount++;
         progressNotifier.value = progressNotifier.value.copyWith(
-          processed: progressNotifier.value.processed + 1,
+          processed: processedCount,
         );
       }
     } catch (e, stackTrace) {
