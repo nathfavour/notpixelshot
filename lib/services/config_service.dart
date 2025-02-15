@@ -76,7 +76,7 @@ class ConfigService {
         'android': '/storage/emulated/0/Pictures/Screenshots',
         'ios': 'Not supported yet'
       },
-      'ollamaModelName': 'llama2',
+      'ollamaModelName': 'tinyllama',
       'ollamaPrompt': 'Explain this image in detail.',
       'serverPort': 9876,
       'configFilePath': '$home/.notpixelshot.json'
