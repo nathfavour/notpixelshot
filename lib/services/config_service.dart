@@ -133,8 +133,8 @@ class ConfigService {
 
       if (response.statusCode == 200) {
         final syncedConfig = jsonDecode(response.body);
-        configData.addAll(syncedConfig);
-        configNotifier.value = configData;
+        configData = syncedConfig;
+        configNotifier.value = syncedConfig;
         print('ConfigService: Config synced from server at $serverHost');
       } else {
         print('ConfigService: Failed to sync config: ${response.statusCode}');

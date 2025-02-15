@@ -66,7 +66,8 @@ class NetworkService {
             ..statusCode = HttpStatus.ok
             ..headers.set('Content-Type', 'application/json')
             ..headers.set('Access-Control-Allow-Origin', '*')
-            ..write(jsonEncode(ConfigService.configData))
+            ..write(jsonEncode(
+                ConfigService.configData['defaultScreenshotDirectory']))
             ..close();
           break;
 
