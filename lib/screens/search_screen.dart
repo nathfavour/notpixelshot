@@ -19,6 +19,10 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     super.initState();
     // Load all screenshots initially
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
     _searchResultsFuture = IndexService.getIndexedFiles();
   }
 

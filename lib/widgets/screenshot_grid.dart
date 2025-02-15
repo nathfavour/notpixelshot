@@ -16,46 +16,50 @@ class ScreenshotGrid extends StatefulWidget {
 }
 
 class _ScreenshotGridState extends State<ScreenshotGrid> {
-  List<FileSystemEntity> _files = [];
+  // Remove _files and related logic
+  // List<FileSystemEntity> _files = [];
   Set<String> _indexedFiles = {};
 
   @override
   void initState() {
     super.initState();
-    _loadFiles();
+    // Remove _loadFiles()
     _loadIndexedFiles();
     _startMonitoring();
   }
 
   @override
   void dispose() {
-    IndexService.totalScreenshotsNotifier.removeListener(_loadFiles);
+    IndexService.totalScreenshotsNotifier.removeListener(
+        // Remove _loadFiles
+        null);
     super.dispose();
   }
 
-  Future<void> _loadFiles() async {
-    try {
-      final directoryPath = _getScreenshotDirectory();
-      final directory = Directory(directoryPath);
-      print('ScreenshotGrid: Loading files from directory: $directoryPath');
-      if (!await directory.exists()) {
-        print('ScreenshotGrid: Directory does not exist: $directoryPath');
-        return;
-      }
-      final files = await directory
-          .list()
-          .where((f) =>
-              f.path.toLowerCase().endsWith('.png') ||
-              f.path.toLowerCase().endsWith('.jpg'))
-          .toList();
-      print('ScreenshotGrid: Found ${files.length} files.');
-      setState(() {
-        _files = files;
-      });
-    } catch (e) {
-      print('ScreenshotGrid: Error loading files: $e');
-    }
-  }
+  // Remove _loadFiles()
+  // Future<void> _loadFiles() async {
+  //   try {
+  //     final directoryPath = _getScreenshotDirectory();
+  //     final directory = Directory(directoryPath);
+  //     print('ScreenshotGrid: Loading files from directory: $directoryPath');
+  //     if (!await directory.exists()) {
+  //       print('ScreenshotGrid: Directory does not exist: $directoryPath');
+  //       return;
+  //     }
+  //     final files = await directory
+  //         .list()
+  //         .where((f) =>
+  //             f.path.toLowerCase().endsWith('.png') ||
+  //             f.path.toLowerCase().endsWith('.jpg'))
+  //         .toList();
+  //     print('ScreenshotGrid: Found ${files.length} files.');
+  //     setState(() {
+  //       _files = files;
+  //     });
+  //   } catch (e) {
+  //     print('ScreenshotGrid: Error loading files: $e');
+  //   }
+  // }
 
   Future<void> _loadIndexedFiles() async {
     try {
@@ -77,7 +81,8 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
     IndexService.monitorDirectory(directory, (FileSystemEvent event) async {
       if (event.type == FileSystemEvent.create ||
           event.type == FileSystemEvent.delete) {
-        await _loadFiles();
+        // Remove _loadFiles()
+        // await _loadFiles();
         await _loadIndexedFiles();
       }
     });
@@ -97,8 +102,8 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
 
   @override
   Widget build(BuildContext context) {
-    final filesToShow =
-        widget.searchResults ?? _files.map((e) => {'path': e.path}).toList();
+    // Use the search results if available
+    final filesToShow = widget.searchResults;
 
     return ValueListenableBuilder<int>(
       valueListenable: IndexService.totalScreenshotsNotifier,
@@ -111,7 +116,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
           );
         }
         return GridView.builder(
-          itemCount: filesToShow.length,
+          itemCount: filesToShow?.length ?? 0,
           physics: const AlwaysScrollableScrollPhysics(),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 4,
@@ -119,7 +124,7 @@ class _ScreenshotGridState extends State<ScreenshotGrid> {
             crossAxisSpacing: 4,
           ),
           itemBuilder: (context, index) {
-            final file = filesToShow[index];
+            final file = filesToShow![index];
             final filePath = file['path'] as String;
             final isIndexed = _indexedFiles.contains(filePath);
             final isHighlighted = widget.searchQuery.isNotEmpty &&
