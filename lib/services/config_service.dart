@@ -262,26 +262,76 @@ class ConfigService {
   }
 
   static String getScreenshotPath() {
-    final paths = configData['paths']['screenshots'];
+    try {
+      final paths = configData['paths']?['screenshots'];
+      if (paths == null) {
+        print(
+            'ConfigService: Screenshot paths not found in config, using default');
+        return _getDefaultScreenshotPath();
+      }
+
+      if (Platform.isAndroid) {
+        return paths['android']?['primary'] ??
+            '/storage/emulated/0/Pictures/Screenshots';
+      } else if (Platform.isIOS) {
+        return paths['ios']?['primary'] ?? 'Photos/Screenshots';
+      } else if (Platform.isWindows) {
+        final winPath =
+            paths['windows'] ?? '%USERPROFILE%\\Pictures\\Screenshots';
+        return winPath.replaceAll(
+            '%USERPROFILE%', Platform.environment['USERPROFILE'] ?? '');
+      } else if (Platform.isMacOS) {
+        return paths['macos'] ??
+            '${Platform.environment['HOME']}/Pictures/Screenshots';
+      } else {
+        return paths['linux'] ??
+            '${Platform.environment['HOME']}/Pictures/Screenshots';
+      }
+    } catch (e) {
+      print('ConfigService: Error getting screenshot path: $e');
+      return _getDefaultScreenshotPath();
+    }
+  }
+
+  static String _getDefaultScreenshotPath() {
+    final home = Platform.environment['HOME'] ??
+        Platform.environment['USERPROFILE'] ??
+        '.';
     if (Platform.isAndroid) {
-      return paths['android']['primary'];
+      return '/storage/emulated/0/Pictures/Screenshots';
     } else if (Platform.isIOS) {
-      return paths['ios']['primary'];
+      return 'Photos/Screenshots';
     } else if (Platform.isWindows) {
-      return paths['windows'].replaceAll(
-          '%USERPROFILE%', Platform.environment['USERPROFILE'] ?? '');
-    } else if (Platform.isMacOS) {
-      return paths['macos'];
+      return '${Platform.environment['USERPROFILE']}\\Pictures\\Screenshots';
     } else {
-      return paths['linux'];
+      return '$home/Pictures/Screenshots';
     }
   }
 
   static String getDatabasePath() {
-    return configData['paths']['database'];
+    try {
+      return configData['paths']?['database'] ??
+          path.join(_getDefaultConfigDir(), 'screenshots.db');
+    } catch (e) {
+      print('ConfigService: Error getting database path: $e');
+      return path.join(_getDefaultConfigDir(), 'screenshots.db');
+    }
   }
 
   static String getIndexPath() {
-    return configData['paths']['index'];
+    try {
+      return configData['paths']?['index'] ??
+          path.join(_getDefaultConfigDir(), 'index');
+    } catch (e) {
+      print('ConfigService: Error getting index path: $e');
+      return path.join(_getDefaultConfigDir(), 'index');
+    }
+  }
+
+  static String _getDefaultConfigDir() {
+    final home = Platform.environment['HOME'] ??
+        Platform.environment['USERPROFILE'] ??
+        '.';
+    return path.join(home, '.notpixelshot');
   }
 }
